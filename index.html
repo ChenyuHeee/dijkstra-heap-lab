@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#081310">
+  <title>堆，改变最短路的什么？ · Dijkstra with Heaps</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23081310'/%3E%3Cpath d='M7 20h4V10H7zm7 0h4V5h-4zm7 0h4v-8h-4z' fill='%23d8f58a'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css?v=5">
+  <script defer src="data.js"></script>
+  <script defer src="demo-data.js"></script>
+  <script defer src="visuals.js?v=5"></script>
+  <script defer src="app.js?v=5"></script>
+</head>
+<body>
+  <svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h4v14H7zm6 0h4v14h-4z" fill="currentColor"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 2 7M4 4v6h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-notes" viewBox="0 0 24 24"><path d="M6 3h12v18H6zm3 5h6m-6 4h6m-6 4h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5m6 0h5v5m0 6v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+
+  <main id="viewport" aria-label="Dijkstra 与优先队列交互式幻灯片">
+    <div id="stage">
+      <header class="chrome">
+        <button class="brand" id="homeButton" aria-label="返回封面">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>HEAP<span class="brand-dim">/</span>LAB</span>
+        </button>
+        <div class="chrome-right">
+          <span class="course-label">ZJU · ADS 2026 · PROJECT 02</span>
+          <button class="icon-button" id="overviewButton" title="总览（O）" aria-label="打开幻灯片总览"><svg><use href="#i-grid"/></svg></button>
+          <button class="icon-button" id="notesButton" title="演讲者备注（N）" aria-label="打开演讲者备注" aria-pressed="false"><svg><use href="#i-notes"/></svg></button>
+          <button class="icon-button" id="fullscreenButton" title="全屏（F）" aria-label="切换全屏"><svg><use href="#i-full"/></svg></button>
+        </div>
+      </header>
+
+      <section class="slide slide-cover" data-title="堆，改变最短路的什么？" data-chapter="开场">
+        <div class="cover-copy">
+          <div class="eyebrow">DIJKSTRA WITH HEAPS <span>算法 × 工程</span></div>
+          <h1>堆，改变<br>最短路的<span class="text-accent">什么？</span></h1>
+          <p class="cover-lead">同一个 Dijkstra，同一组美国路网查询。<br>我们改变优先队列，测量理论之外的答案。</p>
+          <div class="cover-stats" aria-label="实验覆盖">
+            <div><strong>7</strong><span>种优先队列</span></div>
+            <div><strong>12</strong><span>个真实路网</span></div>
+            <div><strong>23.9<span class="unit">M</span></strong><span>最大图节点</span></div>
+          </div>
+          <div class="author-line"><strong>何宸禹</strong><span>ZJU ADS 2026 · Project 2</span></div>
+        </div>
+        <div class="cover-visual map-card">
+          <canvas id="coverMap" aria-label="纽约真实路网中的 Dijkstra 搜索与最短路径动画"></canvas>
+          <div class="map-topline"><span class="live-dot"></span> REAL ROAD NETWORK <span>NY / LOCAL</span></div>
+          <div class="cover-map-caption"><span id="coverMapStatus">正在搜索</span><strong>同一最短距离，<br><em>不同工程代价。</em></strong></div>
+          <div class="map-attribution">DIMACS USA-road-d.NY · 局部子图</div>
+        </div>
+        <button class="cover-next" data-next>从一次真实搜索开始 <svg><use href="#i-arrow"/></svg></button>
+      </section>
+
+      <section class="slide" data-title="最短路不变，搜索过程可见" data-chapter="搜索">
+        <div class="slide-head">
+          <div class="eyebrow">01 / SEARCH</div>
+          <h2>最短路不变，搜索过程可见</h2>
+          <p>取出当前最小键，松弛出边；目标点被弹出时，点对点查询结束。</p>
+        </div>
+        <div class="slide-body explorer-layout">
+          <div class="map-card explorer-map">
+            <div class="map-toolbar">
+              <label class="select-label">优先队列 <select id="explorerHeap" aria-label="选择地图动画使用的堆"></select></label>
+              <span class="data-badge">真实轨迹</span>
+            </div>
+            <canvas id="explorerMap" aria-label="可交互的 Dijkstra 搜索地图"></canvas>
+            <div class="map-legend"><span><i class="legend-settled"></i>已确定</span><span><i class="legend-frontier"></i>搜索前沿</span><span><i class="legend-path"></i>最短路径</span><span class="map-attribution">NY 局部 · 非导航</span></div>
+            <div class="map-controls" data-no-print>
+              <button class="control-button play-toggle" id="explorerPlay" aria-label="播放地图动画"><svg><use href="#i-play"/></svg><span>播放</span></button>
+              <button class="icon-button" id="explorerReset" aria-label="从头播放" title="重播（R）"><svg><use href="#i-reset"/></svg></button>
+              <input id="explorerTimeline" class="timeline" type="range" min="0" max="1000" value="0" aria-label="搜索进度">
+              <button class="speed-button" id="explorerSpeed" aria-label="切换动画速度">1×</button>
+            </div>
+          </div>
+          <aside class="explain-rail">
+            <div class="distance-card"><span>目标最短距离</span><strong id="explorerDistance">—</strong><small>DIMACS 距离权值</small></div>
+            <ol class="algorithm-steps">
+              <li><span>01</span><div><strong>extract-min</strong><p>确定当前最近的顶点</p></div></li>
+              <li><span>02</span><div><strong>relax</strong><p>发现顶点，或得到更短距离</p></div></li>
+              <li><span>03</span><div><strong>decrease-key</strong><p>更新它在优先队列中的键</p></div></li>
+            </ol>
+            <div class="live-stats" id="explorerStats"></div>
+            <p class="microcopy">832 节点 / 2,948 弧的局部诱导子图，仅用于过程演示；性能数字来自完整路网。</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="slide" data-title="同一次查询，换上不同的堆" data-chapter="搜索">
+        <div class="slide-head compact-head">
+          <div class="eyebrow">02 / COMPARE</div>
+          <h2>同一次查询，换上不同的堆</h2>
+          <p>A / B 自由选择。比较搜索顺序、最终路径和操作次数，而不是看一场虚假的“实时竞速”。</p>
+        </div>
+        <div class="slide-body compare-layout">
+          <div class="compare-grid">
+            <article class="compare-panel" style="--heap-color: var(--four)">
+              <div class="compare-head"><span class="compare-letter">A</span><select id="compareA" aria-label="选择 A 侧堆"></select><span id="compareAHint"></span></div>
+              <canvas id="compareAMap" aria-label="A 侧 Dijkstra 搜索地图"></canvas>
+              <div class="compare-stats" id="compareAStats"></div>
+            </article>
+            <article class="compare-panel" style="--heap-color: var(--radix)">
+              <div class="compare-head"><span class="compare-letter">B</span><select id="compareB" aria-label="选择 B 侧堆"></select><span id="compareBHint"></span></div>
+              <canvas id="compareBMap" aria-label="B 侧 Dijkstra 搜索地图"></canvas>
+              <div class="compare-stats" id="compareBStats"></div>
+            </article>
+          </div>
+          <div class="compare-bottom">
+            <div class="map-controls" data-no-print>
+              <button class="control-button play-toggle" id="comparePlay" aria-label="播放对比动画"><svg><use href="#i-play"/></svg><span>播放</span></button>
+              <button class="icon-button" id="compareReset" aria-label="重置对比动画"><svg><use href="#i-reset"/></svg></button>
+              <input id="compareTimeline" class="timeline" type="range" min="0" max="1000" value="0" aria-label="对比搜索进度">
+              <button class="speed-button" id="compareSpeed" aria-label="切换对比动画速度">1×</button>
+            </div>
+            <div class="compare-outcome" id="compareOutcome"></div>
+          </div>
+          <p class="microcopy center">按各自搜索进度同步播放，速度不代表实测耗时；地图为真实轨迹，堆内部机制见后续三页。</p>
+        </div>
+      </section>
+
+      <section class="slide" data-title="算法不变，优先队列可替换" data-chapter="实现">
+        <div class="slide-head">
+          <div class="eyebrow">03 / ONE HARNESS</div>
+          <h2>算法不变，优先队列可替换</h2>
+          <p>七种实现，三条工程路线；共享同一套图、查询与 Dijkstra 主循环。</p>
+        </div>
+        <div class="slide-body">
+          <div class="taxonomy-grid">
+            <article class="taxonomy-card">
+              <div class="taxonomy-number">01</div><span class="taxonomy-tag">IMPLICIT</span>
+              <h3>连续数组</h3><p>下标就是父子关系，缓存局部性好。</p>
+              <div class="array-motif" aria-hidden="true"><i>3</i><i>8</i><i>7</i><i>12</i><i>14</i><i>9</i></div>
+              <div class="heap-chips"><span style="--c:var(--bin)">二叉堆 bin</span><span style="--c:var(--four)">4-ary 堆 four</span></div>
+              <small>extract-min / decrease-key · O(log n)</small>
+            </article>
+            <article class="taxonomy-card">
+              <div class="taxonomy-number">02</div><span class="taxonomy-tag">POINTER-BASED</span>
+              <h3>指针与合并</h3><p>灵活的树结构，也意味着更多指针维护。</p>
+              <svg class="tree-motif" viewBox="0 0 300 90" aria-hidden="true"><path d="M150 16 90 52m60-36 60 36M90 52 55 78m35-26 35 26m75-26 35 26"/><g><circle cx="150" cy="16" r="10"/><circle cx="90" cy="52" r="10"/><circle cx="210" cy="52" r="10"/><circle cx="55" cy="78" r="8"/><circle cx="125" cy="78" r="8"/><circle cx="245" cy="78" r="8"/></g></svg>
+              <div class="heap-chips pointer-chips"><span style="--c:var(--left)">左偏堆</span><span style="--c:var(--skew)">斜堆</span><span style="--c:var(--fib)">Fibonacci</span><span style="--c:var(--binom)">二项堆</span></div>
+              <small>Fibonacci decrease-key · O(1) 摊还</small>
+            </article>
+            <article class="taxonomy-card radix-taxonomy">
+              <div class="taxonomy-number">03</div><span class="taxonomy-tag">MONOTONE INTEGER</span>
+              <h3>按位分桶</h3><p>利用整数键和弹出键的单调性，绕开纯比较。</p>
+              <div class="bucket-motif" aria-hidden="true"><i>0</i><i>1</i><i>2</i><i>3</i><i>…</i><i>32</i></div>
+              <div class="heap-chips"><span style="--c:var(--radix)">radix heap</span></div>
+              <small>push / decrease / pop · O(1) 摊还</small>
+            </article>
+          </div>
+          <div class="pipeline" aria-label="统一实现与公平性">
+            <div><span>图存储</span><strong>CSR</strong></div><i></i>
+            <div><span>主循环</span><strong>编译期内联</strong></div><i></i>
+            <div><span>查询</span><strong>目标弹出即停</strong></div><i></i>
+            <div><span>重置</span><strong>touched-list</strong></div>
+          </div>
+          <div class="verification-strip"><span>正确性底线</span><strong>堆模型对拍</strong><strong>Bellman–Ford 对拍</strong><strong>真实路网 --verify</strong><strong>ASan + UBSan</strong></div>
+        </div>
+      </section>
+
+      <section class="slide" data-title="从 26 万到 2,395 万节点" data-chapter="实验">
+        <div class="slide-head">
+          <div class="eyebrow">04 / AT SCALE</div>
+          <h2>从 26 万到 2,395 万节点</h2>
+          <p>12 个 DIMACS 美国路网。所有堆共享图、查询、编译选项和单线程执行环境。</p>
+        </div>
+        <div class="slide-body scale-layout">
+          <div class="chart-card scale-chart-card">
+            <div class="card-heading"><span>路网规模</span><small>节点数 · 对数坐标</small></div>
+            <div id="scaleChart"></div>
+            <div class="query-bands"><div><strong>× 1000</strong><span>NY / BAY / COL / FLA / NW / NE / CAL</span></div><div><strong>× 500</strong><span>LKS / E / W</span></div><div><strong>× 100</strong><span>CTR / USA</span></div></div>
+          </div>
+          <div class="metric-stack">
+            <article><span>最大图节点</span><strong>23,947,347</strong><small>USA · full road network</small></article>
+            <article><span>最大图有向弧</span><strong>58,333,344</strong><small>统一 CSR 图存储</small></article>
+            <article class="accent-metric"><span>每种堆的主实验查询</span><strong>8,700</strong><small>计时取每查询中位数</small></article>
+          </div>
+        </div>
+        <div class="slide-footnote">Xeon Platinum 8368 · 单线程绑核 · GCC 11.5 · -O3 -DNDEBUG · 读图不计入查询时间</div>
+      </section>
+
+      <section class="slide" data-title="规模增长，排名没有翻转" data-chapter="结果">
+        <div class="slide-head compact-head">
+          <div class="eyebrow">05 / MAIN RESULT</div>
+          <h2>规模增长，排名没有翻转</h2>
+          <p>每查询中位耗时，双对数坐标。点击图例可显示或隐藏一种堆。</p>
+        </div>
+        <div class="slide-body runtime-layout">
+          <div class="chart-card runtime-chart-card">
+            <div class="chart-toolbar"><div id="runtimeLegend" class="chart-legend" data-no-print></div><button id="runtimeAll" class="text-button" data-no-print>显示全部 7 种</button></div>
+            <div id="runtimeChart" aria-label="12 个路网上各堆运行时间的双对数折线图"></div>
+          </div>
+          <aside class="insight-stack">
+            <article style="--accent:var(--radix)"><span>整体最快</span><strong>12 / 12</strong><p><b>radix</b> 在每个路网都最快</p></article>
+            <article style="--accent:var(--four)"><span>比较堆最快</span><strong>12 / 12</strong><p><b>4-ary</b> 稳定领先其它比较堆</p></article>
+            <article style="--accent:var(--fib)"><span>Fibonacci / four</span><strong id="fibRatioRange">—</strong><p>理论最优，实测始终更慢</p></article>
+          </aside>
+        </div>
+        <div class="slide-footnote">主实验：每个数据集 1 轮正式计时；不同数据集的查询数不同，见上一页与完整结果表。</div>
+      </section>
+
+      <section class="slide" data-title="把一次查询的时间拆开" data-chapter="结果">
+        <div class="slide-head compact-head">
+          <div class="eyebrow">06 / TIME, NOT JUST BIG-O</div>
+          <h2 id="barSlideTitle">在全美图上，差距落到秒</h2>
+          <p>四种代表堆的每查询中位耗时。切换数据集，查看绝对时间与相对差距。</p>
+        </div>
+        <div class="slide-body bars-layout">
+          <div class="chart-card bars-card">
+            <div class="chart-toolbar"><label class="select-label">数据集 <select id="barDataset" aria-label="选择柱状图数据集"></select></label><span class="data-badge" id="barNq">主实验</span></div>
+            <div id="barChart" class="horizontal-bars"></div>
+            <div class="bar-axis-note">耗时越短越好 <span>条形长度按当前数据集最大值归一化</span></div>
+          </div>
+          <aside class="ratio-cards">
+            <article style="--accent:var(--radix)"><span>radix 相比 four</span><strong id="radixSaving">—</strong><p>查询耗时降低</p></article>
+            <article style="--accent:var(--fib)"><span>Fibonacci / four</span><strong id="fibRatio">—</strong><p>理论优势的工程反转</p></article>
+            <div class="mini-conclusion"><span class="live-dot"></span><p id="barConclusion"></p></div>
+          </aside>
+        </div>
+        <div class="slide-footnote">这是一张实测耗时图，不是动画竞速；CTR / USA 的主实验各为 100 对查询。</div>
+      </section>
+
+      <section class="slide" data-title="4-ary 赢在哪里？" data-chapter="机制">
+        <div class="slide-head compact-head">
+          <div class="eyebrow">07 / CACHE WINS</div>
+          <h2>4-ary 赢在哪里？</h2>
+          <p>更浅的树 + 连续的内存，而不是更好的渐近复杂度。</p>
+        </div>
+        <div class="slide-body mechanism-layout">
+          <div class="mechanism-lab">
+            <div class="heap-pair">
+              <article><div class="mechanism-title"><span style="color:var(--bin)">二叉堆</span><small>parent = ⌊(i−1)/2⌋</small></div><div id="binaryHeap" class="array-tree"></div></article>
+              <article><div class="mechanism-title"><span style="color:var(--four)">4-ary 堆</span><small>parent = ⌊(i−1)/4⌋</small></div><div id="fourHeap" class="array-tree"></div></article>
+            </div>
+            <div class="mechanism-controls" data-no-print><button class="control-button" id="heapPlay"><svg><use href="#i-play"/></svg><span>插入键 4</span></button><button class="icon-button" id="heapReset" aria-label="重置堆动画"><svg><use href="#i-reset"/></svg></button><span id="heapStepLabel">观察两种堆的上滤路径</span></div>
+          </div>
+          <aside class="mechanism-insights">
+            <article class="big-stat"><span>相比二叉堆</span><strong id="fourImprovement">—</strong><p>12 个数据集的耗时降低幅度</p></article>
+            <article><span class="insight-index">01</span><h3>树高减半</h3><p><code>log₂n → log₄n</code><br>插入键 4：二叉堆上滤 2 次，4-ary 只需 1 次。</p></article>
+            <article><span class="insight-index">02</span><h3>缓存更友好</h3><p><code>heap / key / pos</code> 都是连续数组；父子关系靠下标计算，无需追逐指针。</p></article>
+          </aside>
+        </div>
+        <div class="slide-footnote">左侧是一次插入的机制示意，不是耗时基准；右侧统计来自 12 个完整路网。</div>
+      </section>
+
+      <section class="slide" data-title="O(1) 的 decrease-key，为何没赢？" data-chapter="机制">
+        <div class="slide-head compact-head">
+          <div class="eyebrow">08 / THEORY ≠ WALL CLOCK</div>
+          <h2>O(1) 的 decrease-key，为何没赢？</h2>
+          <p>理论优势出现在不占多数的操作上；成本却落在每一次 pop。</p>
+        </div>
+        <div class="slide-body fib-layout">
+          <article class="operation-card">
+            <span class="card-kicker">实际操作序列</span><h3>decrease-key 不是多数</h3>
+            <div id="decreaseRatios"></div>
+            <p>占 pop 的比例<br><small>以 4-ary 查询操作计数为例</small></p>
+            <div class="complexity-note"><span>理论 Dijkstra</span><strong>O(m + n log n)</strong></div>
+          </article>
+          <article class="fib-lab">
+            <div class="mechanism-title"><span>Fibonacci 堆内部</span><small id="fibPhase">decrease-key：切断，而非逐级上滤</small></div>
+            <div id="fibTree" class="fib-tree"></div>
+            <div class="mechanism-controls" data-no-print><button class="control-button" id="fibPlay"><svg><use href="#i-play"/></svg><span>播放机制</span></button><button class="icon-button" id="fibReset" aria-label="重置 Fibonacci 动画"><svg><use href="#i-reset"/></svg></button><span>cut → pop → consolidate</span></div>
+          </article>
+          <aside class="cost-stack">
+            <article class="big-stat"><span>USA · Fib / four</span><strong id="usaFibRatio">—</strong><p>实测每查询中位耗时比</p></article>
+            <article><h3>consolidate</h3><p>每次 pop 后合并同度树，重建根链表。</p></article>
+            <article><h3>pointer chasing</h3><p>parent / child / left / right 与标记维护带来常数成本。</p></article>
+          </aside>
+        </div>
+        <div class="slide-footnote">中间为机制示意；decrease-key 的 O(1) 是摊还界，级联切断不代表每次操作都严格只做一步。</div>
+      </section>
+
+      <section class="slide" data-title="radix：不再逐层比较，按位分桶" data-chapter="机制">
+        <div class="slide-head compact-head">
+          <div class="eyebrow">09 / MONOTONE INTEGER KEYS</div>
+          <h2>radix：不再逐层比较，按位分桶</h2>
+          <p>非负整数键 + extract-min 单调，让摊还 O(1) 成为可能。</p>
+        </div>
+        <div class="slide-body radix-layout">
+          <div class="radix-lab">
+            <div class="radix-status"><span>上一次弹出的键 <code>last</code></span><strong id="radixLast">10</strong><span id="radixStepLabel">最低非空桶将决定下一个 last</span></div>
+            <div id="radixBuckets" class="radix-buckets" aria-label="radix heap 重分桶动画"></div>
+            <div class="radix-formula"><code>bucket(k) = 0</code><span>k = last</span><code>⌊log₂(k XOR last)⌋ + 1</code><span>k ≠ last</span></div>
+            <div class="mechanism-controls" data-no-print><button class="control-button" id="radixPlay"><svg><use href="#i-play"/></svg><span>播放重分桶</span></button><button class="icon-button" id="radixNext" aria-label="单步执行"><svg><use href="#i-chevron"/></svg></button><button class="icon-button" id="radixReset" aria-label="重置 radix 动画"><svg><use href="#i-reset"/></svg></button><span>示例：桶 3 中的最小键是 12</span></div>
+          </div>
+          <aside class="mechanism-insights radix-insights">
+            <article class="big-stat"><span>12 个路网</span><strong>12 / 12</strong><p>radix 都是整体最快</p></article>
+            <article><span class="insight-index">01</span><h3>重分桶</h3><p>找到最低非空桶，以其中最小键更新 <code>last</code>，再按新基准分配剩余元素。</p></article>
+            <article><span class="insight-index">02</span><h3>摊还 O(1)</h3><p>32 位键下，每个元素最多跨桶 32 次。</p></article>
+            <article class="constraint-card"><h3>适用边界</h3><p>整数键 + 单调操作序列。<br><strong>不是通用比较堆。</strong></p></article>
+          </aside>
+        </div>
+        <div class="slide-footnote">动画使用小型整数键序列解释真实重分桶规则；性能结论来自完整路网实验。</div>
+      </section>
+
+      <section class="slide" data-title="排名稳定，不只靠一次计时" data-chapter="验证">
+        <div class="slide-head compact-head">
+          <div class="eyebrow">10 / ROBUSTNESS</div>
+          <h2 id="stabilityTitle">排名稳定，不只靠一次计时</h2>
+          <p id="stabilitySubtitle">7 个 1000 对数据集 · 1 轮热身 + 3 轮正式计时。</p>
+        </div>
+        <div class="stability-tabs" id="stabilityTabs" data-no-print>
+          <button data-stability="repeat" class="is-selected">三轮重复</button>
+          <button data-stability="c1000">CTR / USA × 1000</button>
+          <button data-stability="seeds">查询种子</button>
+          <button data-stability="rss">独立内存测量</button>
+        </div>
+        <div class="slide-body" id="stabilityContent"></div>
+        <div class="slide-footnote" id="stabilityFootnote">主结果与补充实验分开呈现，不混合不同查询数和计时轮次。</div>
+      </section>
+
+      <section class="slide" data-title="选择数据结构，先看约束" data-chapter="结论">
+        <div class="slide-head">
+          <div class="eyebrow">11 / DECISION</div>
+          <h2>选择数据结构，先看约束</h2>
+          <p>没有一个“理论上最好”的名字，能替代对数据、操作序列和机器的判断。</p>
+        </div>
+        <div class="slide-body decision-layout">
+          <div class="decision-grid">
+            <article class="decision-card" style="--accent:var(--four)"><span class="decision-kicker">通用比较堆</span><div class="decision-icon">4</div><h3>默认选 4-ary</h3><p>实现简单、内存可控、缓存友好。</p><strong>12 / 12</strong><small>比较堆中最快</small></article>
+            <article class="decision-card" style="--accent:var(--radix)"><span class="decision-kicker">整数键 + 单调</span><div class="decision-icon">01</div><h3>本题选 radix</h3><p>利用数据性质，换取更低的摊还成本。</p><strong id="decisionSaving">—</strong><small>USA 相比 four 耗时降低</small></article>
+            <article class="decision-card" style="--accent:var(--fib)"><span class="decision-kicker">理论基准</span><div class="decision-icon">F</div><h3>保留 Fibonacci</h3><p>理解渐近上界，但不作为本场景的工程默认。</p><strong>O(1)</strong><small>decrease-key · 摊还</small></article>
+          </div>
+          <div class="next-step"><span>继续加速的下一步</span><strong>减少搜索空间，而非继续微调堆</strong><div><i>双向 Dijkstra</i><i>A*</i><i>ALT</i><i>contraction hierarchies</i></div></div>
+          <p class="closing-line">理论界回答“最多多慢”，实测回答“这台机器上多快”。</p>
+        </div>
+      </section>
+
+      <section class="slide slide-qa" data-title="Q & A" data-chapter="结束">
+        <div class="qa-copy">
+          <div class="eyebrow">THANK YOU</div>
+          <h2>Q <span>&</span> A</h2>
+          <p>同一条最短路，<br><strong>不同的工程代价。</strong></p>
+          <div class="qa-takeaways"><span><i style="--c:var(--four)"></i>比较堆：4-ary</span><span><i style="--c:var(--radix)"></i>整数单调键：radix</span><span><i style="--c:var(--fib)"></i>理论基准：Fibonacci</span></div>
+          <div class="qa-links"><span>代码 <code>src/</code></span><span>数据 <code>results/bench.csv</code></span><span>报告 <code>report.md</code></span></div>
+          <button class="text-button qa-appendix" data-appendix>查看备份数据与实验口径 <svg><use href="#i-arrow"/></svg></button>
+        </div>
+        <div class="qa-map map-card"><canvas id="qaMap" aria-label="最终最短路径地图"></canvas><div class="map-attribution">DIMACS USA-road-d.NY · 局部子图</div></div>
+      </section>
+
+      <section class="slide appendix-slide" data-title="完整实验结果" data-chapter="备份" data-appendix="true">
+        <div class="slide-head compact-head"><div class="eyebrow">APPENDIX 01 / FULL RESULTS</div><h2>完整实验结果</h2><p>每查询中位耗时（ms）。主实验，各数据集查询数见表。</p></div>
+        <div class="slide-body"><div id="fullResults" class="full-table-wrap"></div></div>
+        <div class="slide-footnote">每列最优值以薄荷绿标记；radix 是单调优先队列，其余六种为比较堆。</div>
+      </section>
+
+      <section class="slide appendix-slide" data-title="正确性与公平性" data-chapter="备份" data-appendix="true">
+        <div class="slide-head compact-head"><div class="eyebrow">APPENDIX 02 / CORRECT BY CONSTRUCTION</div><h2>正确性与公平性</h2><p>先保证结果一致，再比较谁更快。</p></div>
+        <div class="slide-body verification-layout">
+          <div class="verification-grid"><article><span>01</span><h3>堆模型对拍</h3><p>随机 push / decrease / pop / clear，与有序数组模型比较；每堆 3 个种子。</p></article><article><span>02</span><h3>Bellman–Ford 对拍</h3><p>随机有向图含自环、平行边和零权边；覆盖提前终止、不可达与 s = t。</p></article><article><span>03</span><h3>真实路网验证</h3><p><code>bench --verify</code> 逐查询比较所有堆的 <code>dist[t]</code>。</p></article><article><span>04</span><h3>内存安全</h3><p><code>make san</code> 运行 AddressSanitizer 与 UndefinedBehaviorSanitizer。</p></article></div>
+          <article class="code-card"><div class="code-card-head"><span>src/dijkstra_impl.h</span><small>所有堆共享同一主循环</small></div><pre><code><span class="code-key">while</span> (!PQ_EMPTY(q)) {
+  u = PQ_POP(q);
+  <span class="code-key">if</span> (u == t) <span class="code-key">break</span>;
+  <span class="code-key">for each</span> edge (u, v, w) {
+    nd = dist[u] + w;
+    <span class="code-key">if</span> (nd &lt; dist[v])
+      PQ_DECREASE(q, v, nd);
+  }
+}</code></pre><div class="code-footer">同一 CSR · 同一查询 · -O3 -DNDEBUG · 单线程绑核 · 无逐操作函数指针</div></article>
+        </div>
+      </section>
+
+      <section class="slide appendix-slide" data-title="复杂度与适用边界" data-chapter="备份" data-appendix="true">
+        <div class="slide-head compact-head"><div class="eyebrow">APPENDIX 03 / COMPLEXITY</div><h2>复杂度与适用边界</h2><p>把比较堆与单调整数队列分开讨论。</p></div>
+        <div class="slide-body"><div id="complexityTable" class="full-table-wrap complexity-wrap"></div><div class="complexity-footcards"><article><strong>CSR ≈ 562 MB</strong><span>USA 图存储</span></article><article><strong>O(reached)</strong><span>touched-list 局部重置</span></article><article><strong>提前终止</strong><span>目标点弹出时结束</span></article></div></div>
+      </section>
+
+      <section class="slide appendix-slide" data-title="实验边界与复现" data-chapter="备份" data-appendix="true">
+        <div class="slide-head compact-head"><div class="eyebrow">APPENDIX 04 / REPRODUCIBILITY</div><h2>实验边界与复现</h2><p>哪些结论可以推广，哪些只适用于本次实验。</p></div>
+        <div class="slide-body limits-layout">
+          <div class="limits-list"><article><span>01</span><div><h3>单一机器与编译器</h3><p>绝对耗时不直接移植；没有 CPU 隔离、锁频或关闭 turbo。</p></div></article><article><span>02</span><div><h3>均匀随机点对</h3><p>未按 Dijkstra rank 分层；查询分布会影响搜索空间。</p></div></article><article><span>03</span><div><h3>地图是局部演示</h3><p>真实 NY 坐标与诱导子图，真实堆轨迹；不作为完整图性能测量。</p></div></article><article><span>04</span><div><h3>不混合实验口径</h3><p>主表、三轮重复、1000 对补充查询和独立 RSS 分别呈现。</p></div></article></div>
+          <aside class="source-card"><h3>数据与源码</h3><a href="http://www.diag.uniroma1.it/challenge9/download.shtml" target="_blank" rel="noreferrer">9th DIMACS Challenge ↗</a><a id="coordinateSource" href="#" target="_blank" rel="noreferrer">NY 坐标镜像与校验 ↗</a><div class="source-paths"><code>results/bench.csv</code><code>results/extreme/</code><code>scripts/build_presentation.py</code><code>presentation/tools/export_demo.c</code></div><p>本地双击 <code>presentation/index.html</code> 即可离线播放。刷新实验汇总不会启动或修改任何实验任务。</p></aside>
+        </div>
+      </section>
+
+      <footer class="deck-footer" data-no-print>
+        <div class="footer-progress"><div id="progressSegments"></div><span id="chapterLabel">开场</span></div>
+        <button class="footer-hint" id="helpButton" aria-label="查看键盘快捷键">← → 切页 <span>·</span> Space 播放 <span>·</span> ? 快捷键</button>
+        <div class="footer-nav"><span id="pageIndicator">01 / 17</span><button class="icon-button" id="previousButton" aria-label="上一页"><svg><use href="#i-arrow"/></svg></button><button class="icon-button next-icon" id="nextButton" aria-label="下一页"><svg><use href="#i-arrow"/></svg></button></div>
+      </footer>
+
+      <aside id="notesPanel" aria-label="演讲者备注" hidden><div class="notes-head"><span>SPEAKER NOTES</span><button class="icon-button" id="closeNotes" aria-label="关闭备注"><svg><use href="#i-close"/></svg></button></div><h2 id="notesTitle"></h2><div id="notesBody"></div><div class="notes-footer">N 关闭备注 · 动画页按 R 重播</div></aside>
+      <div id="overviewPanel" class="overlay-panel" hidden><div class="overlay-head"><div><span>DECK OVERVIEW</span><h2>13 个主场景 + 4 页备份</h2></div><button class="icon-button" id="closeOverview" aria-label="关闭总览"><svg><use href="#i-close"/></svg></button></div><div id="overviewGrid" class="overview-grid"></div></div>
+    </div>
+  </main>
+
+  <dialog id="helpDialog" aria-labelledby="helpTitle"><div class="dialog-head"><h2 id="helpTitle">演讲控制</h2><button class="icon-button" id="closeHelp" aria-label="关闭快捷键说明"><svg><use href="#i-close"/></svg></button></div><div class="shortcut-grid"><span><kbd>←</kbd><kbd>→</kbd></span><p>上一页 / 下一页</p><span><kbd>Space</kbd></span><p>动画页播放或暂停；其它页下一页</p><span><kbd>R</kbd></span><p>重播当前页的主动画</p><span><kbd>F</kbd></span><p>进入 / 退出全屏</p><span><kbd>N</kbd></span><p>显示 / 隐藏演讲者备注</p><span><kbd>O</kbd></span><p>打开 / 关闭总览</p><span><kbd>Q</kbd></span><p>跳到 Q &amp; A</p><span><kbd>A</kbd></span><p>跳到第一页备份</p><span><kbd>Home</kbd></span><p>返回封面</p><span><kbd>Esc</kbd></span><p>关闭备注、总览或说明</p></div><p class="dialog-tip">地图和机制页也提供鼠标 / 触控控件。所有数据与动画均在本地，无需联网。</p></dialog>
+  <div id="announcer" class="sr-only" aria-live="polite"></div>
+  <noscript><div class="noscript">请启用 JavaScript，以播放本地实验图表和地图动画。</div></noscript>
+</body>
+</html>
