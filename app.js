@@ -28,7 +28,7 @@
     "ds-binom": `<p><strong>建议 25–40 秒。</strong>二项堆是按 degree 排列的二项树森林，Bk 有 2^k 个节点。动画展示 B0 链接成 B1，再把两个 B1 链接成 B2。pop 扫描根、反转孩子并 meld，decrease 交换 key/id 上移。</p>`,
     "ds-fib": `<p><strong>建议 25–40 秒。</strong>Fibonacci 延迟整理：push 进根链表，decrease 用 cut 和级联切断，pop 才 consolidate。O(1) 是摊还界，不代表任何一次 decrease 都严格一步完成。</p>`,
     "ds-radix": `<p><strong>建议 25–40 秒。</strong>radix 依赖非负整数键和单调 last，按 k XOR last 的最高有效位分桶。最低非空桶找 min，更新 last 后重分桶。每个 32 位元素最多跨桶 32 次，三项操作摊还 O(1)，但不是通用比较堆。</p>`,
-    dijkstra: `<p><strong>建议 40 秒。</strong>现在把数据结构放回 Dijkstra：首次发现顶点 push，更短距离出现时 decrease，弹出最小键确定顶点，目标弹出即停。地图是真实 NY 局部轨迹，性能仍来自完整图。</p>`,
+    dijkstra: `<p><strong>建议 40 秒。</strong>现在把数据结构放回 Dijkstra：首次发现顶点 push，更短距离出现时 decrease，弹出最小键确定顶点，目标弹出即停。地图是真实 NY 局部轨迹，性能仍来自完整图。</p><p>右侧同步画实际堆树：圆点是顶点，连线是父子关系；指针堆显示森林，radix 显示真实桶。每 4 次 pop 采样，不是操作次数图。拖动进度可对照地图与内部结构。</p>`,
     compare: `<p><strong>建议 30 秒。</strong>同一源点和目标点，最短距离不变；这个例子里路径也一致。优先队列改变的是操作实现和成本。动画按搜索进度播放，不代表实测速度。</p>`,
     fairness: `<p><strong>建议 40 秒。</strong>唯一主动变量是堆。图、CSR、Dijkstra 模板、查询、编译选项、单线程绑核和计时口径全部固定。正确性先做模型、Bellman–Ford、真实路网与 sanitizer 验证。</p>`,
     scale: `<p><strong>建议 40 秒。</strong>12 个数据集从 NY 到 USA。主实验每种堆 8700 对查询：7 个 1000、3 个 500、CTR/USA 各 100。三轮重复、最大图 1000 对、种子和 RSS 是独立补充实验，不混入口径。</p>`,
@@ -512,12 +512,17 @@
           : path < 1 ? "目标已确定 · 回溯最短路径" : `最短距离 ${V.formatInt(trace.distance)} · ${trace.path.length} 个路径节点`;
       },
     }));
+    const heapState = new V.HeapStateView($("heapTree"), "four", $("heapStateTitle"), $("heapTreeStats"), $("heapStepInfo"));
     const explorer = new TracePlayer({
       map: new V.MapView($("explorerMap"), "four"), heap: "four",
       playButton: $("explorerPlay"), resetButton: $("explorerReset"), timeline: $("explorerTimeline"),
       speedButton: $("explorerSpeed"), statsElement: $("explorerStats"), distanceElement: $("explorerDistance"),
+      onUpdate: ({ step }) => heapState.setStep(step),
     });
-    $("explorerHeap").addEventListener("change", event => explorer.setHeap(event.target.value));
+    $("explorerHeap").addEventListener("change", event => {
+      heapState.setHeap(event.target.value);
+      explorer.setHeap(event.target.value);
+    });
     controllers.set("dijkstra", explorer);
     controllers.set("compare", new ComparePlayer());
 

@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#081310">
   <title>Dijkstra 与堆 · 7 种优先队列的实现与实验</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23081310'/%3E%3Cpath d='M7 20h4V10H7zm7 0h4V5h-4zm7 0h4v-8h-4z' fill='%23d8f58a'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
   <script defer src="data.js"></script>
   <script defer src="demo-data.js"></script>
-  <script defer src="visuals.js?v=8"></script>
-  <script defer src="app.js?v=8"></script>
+  <script defer src="visuals.js?v=9"></script>
+  <script defer src="app.js?v=9"></script>
 </head>
 <body>
   <svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -109,9 +109,9 @@
 
       <section class="slide" data-scene="dijkstra" data-title="Dijkstra 怎样使用这些堆？" data-chapter="算法">
         <div class="slide-head"><div class="eyebrow">ALGORITHM / DIJKSTRA</div><h2>Dijkstra 怎样使用这些堆？</h2><p>取出当前最小键，松弛出边；目标点被弹出时，点对点查询结束。</p></div>
-        <div class="slide-body explorer-layout">
-          <div class="map-card explorer-map"><div class="map-toolbar"><label class="select-label">优先队列 <select id="explorerHeap" aria-label="选择地图动画使用的堆"></select></label><span class="data-badge">真实轨迹</span></div><canvas id="explorerMap" aria-label="可交互的 Dijkstra 搜索地图"></canvas><div class="map-legend"><span><i class="legend-settled"></i>已确定</span><span><i class="legend-frontier"></i>搜索前沿</span><span><i class="legend-path"></i>最短路径</span><span class="map-attribution">NY 局部 · 非导航</span></div><div class="map-controls" data-no-print><button class="control-button play-toggle" id="explorerPlay" aria-label="播放地图动画"><svg><use href="#i-play"/></svg><span>播放</span></button><button class="icon-button" id="explorerReset" aria-label="从头播放"><svg><use href="#i-reset"/></svg></button><input id="explorerTimeline" class="timeline" type="range" min="0" max="1000" value="0" aria-label="搜索进度"><button class="speed-button" id="explorerSpeed" aria-label="切换动画速度">1×</button></div></div>
-          <aside class="explain-rail"><div class="distance-card"><span>目标最短距离</span><strong id="explorerDistance">—</strong><small>DIMACS 距离权值</small></div><ol class="algorithm-steps"><li><span>01</span><div><strong>extract-min</strong><p>确定当前最近的顶点</p></div></li><li><span>02</span><div><strong>push / relax</strong><p>首次发现顶点时入堆</p></div></li><li><span>03</span><div><strong>decrease-key</strong><p>更短距离出现时更新键</p></div></li></ol><div class="live-stats" id="explorerStats"></div><p class="microcopy">832 节点 / 2,948 弧的局部诱导子图，仅用于过程演示；性能数字来自完整路网。</p></aside>
+        <div class="slide-body explorer-layout algorithm-lab">
+          <div class="map-card explorer-map"><div class="map-toolbar"><label class="select-label">优先队列 <select id="explorerHeap" aria-label="选择地图动画使用的堆"></select></label><span class="data-badge">真实轨迹 + 真实结构</span></div><canvas id="explorerMap" aria-label="可交互的 Dijkstra 搜索地图"></canvas><div class="map-legend"><span><i class="legend-settled"></i>已确定</span><span><i class="legend-frontier"></i>搜索前沿</span><span><i class="legend-path"></i>最短路径</span><span class="map-attribution">NY 局部 · 非导航</span></div><div class="map-controls" data-no-print><button class="control-button play-toggle" id="explorerPlay" aria-label="播放地图动画"><svg><use href="#i-play"/></svg><span>播放</span></button><button class="icon-button" id="explorerReset" aria-label="从头播放"><svg><use href="#i-reset"/></svg></button><input id="explorerTimeline" class="timeline" type="range" min="0" max="1000" value="0" aria-label="搜索进度"><button class="speed-button" id="explorerSpeed" aria-label="切换动画速度">1×</button></div></div>
+          <aside class="heap-state-panel"><div class="heap-state-head"><div><span>PRIORITY QUEUE</span><strong id="heapStateTitle">实际堆结构</strong></div><small id="heapStepInfo">初始快照</small></div><div id="heapTree" class="heap-tree" aria-label="随搜索变化的实际堆树、森林或桶结构"></div><div class="heap-tree-caption"><span>节点 = 顶点 · 连线 = 父子关系</span><span id="heapTreeStats"></span></div><div class="distance-card"><span>目标最短距离</span><strong id="explorerDistance">—</strong><small>DIMACS 距离权值</small></div><div class="live-stats" id="explorerStats"></div><p class="microcopy">每 4 次 pop 采样真实结构；圆点与连线直接来自当前堆，不是操作次数图。</p></aside>
         </div>
       </section>
 

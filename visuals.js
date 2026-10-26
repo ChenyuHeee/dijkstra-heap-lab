@@ -496,6 +496,138 @@
     }
   }
 
+  function compactDistance(value) {
+    if (value >= 100000) return `${Math.round(value / 1000)}k`;
+    if (value >= 10000) return `${(value / 1000).toFixed(1)}k`;
+    return String(value);
+  }
+
+  class HeapStateView {
+    constructor(container, heap, titleElement, statsElement, stepElement) {
+      this.container = container;
+      this.titleElement = titleElement;
+      this.statsElement = statsElement;
+      this.stepElement = stepElement;
+      this.snapshotIndex = -1;
+      this.previousIds = null;
+      this.setHeap(heap);
+    }
+    setHeap(heap) {
+      this.heap = heap;
+      this.trace = DEMO.traces[heap];
+      this.color = COLORS[heap];
+      this.snapshotIndex = -1;
+      this.previousIds = null;
+      this.titleElement.textContent = heap === "radix" ? "radix · 实际桶结构" : `${LABELS[heap]} · 实际堆结构`;
+      this.setStep(0);
+    }
+    setStep(step) {
+      const snapshots = this.trace.snapshots;
+      let low = 0, high = snapshots.length - 1, index = 0;
+      while (low <= high) {
+        const middle = (low + high) >> 1;
+        if (snapshots[middle].step <= step) {
+          index = middle;
+          low = middle + 1;
+        } else high = middle - 1;
+      }
+      const snapshot = snapshots[index];
+      this.stepElement.textContent = step === 0 ? "初始快照 · 源点入堆"
+        : snapshot.step === step ? `pop ${step} 后的真实快照`
+        : `当前 pop ${step} · 快照 ${snapshot.step}`;
+      if (index === this.snapshotIndex) return;
+      this.snapshotIndex = index;
+      this.render(snapshot);
+    }
+    render(snapshot) {
+      if (this.heap === "radix") this.renderBuckets(snapshot);
+      else this.renderTree(snapshot);
+      this.previousIds = new Set(snapshot.nodes.map(node => node[0]));
+    }
+    renderBuckets(snapshot) {
+      const buckets = Array.from({ length: 33 }, () => []);
+      for (const [id, key, bucket] of snapshot.nodes) buckets[bucket].push([id, key]);
+      const occupied = buckets.map((items, bucket) => ({ items, bucket })).filter(item => item.items.length);
+      const w = 900, h = 460;
+      const columns = 3;
+      const cardWidth = (w - 50) / columns;
+      const cards = occupied.map(({ items, bucket }, index) => {
+        const x = 20 + (index % columns) * cardWidth;
+        const y = 22 + Math.floor(index / columns) * 125;
+        const keys = items.slice(0, 8).map(([id, key], itemIndex) => {
+          const chipX = x + 12 + (itemIndex % 4) * 58;
+          const chipY = y + 43 + Math.floor(itemIndex / 4) * 28;
+          return `<g class="heap-state-node"><title>顶点 ${id} · 键 ${key}</title><rect x="${chipX}" y="${chipY}" width="51" height="22" rx="4" fill="${rgba(this.color, .14)}" stroke="${rgba(this.color, .45)}"/><text x="${chipX + 25.5}" y="${chipY + 11}" text-anchor="middle" dominant-baseline="central" fill="#eef4eb" font-family="SFMono-Regular,Consolas,monospace" font-size="11">${compactDistance(key)}</text></g>`;
+        }).join("");
+        return `<g><rect x="${x}" y="${y}" width="${cardWidth - 12}" height="108" rx="8" fill="${rgba(this.color, .045)}" stroke="${rgba(this.color, .25)}"/><text x="${x + 12}" y="${y + 24}" fill="${this.color}" font-family="SFMono-Regular,Consolas,monospace" font-size="14" font-weight="600">B${bucket}</text><text x="${x + cardWidth - 24}" y="${y + 24}" text-anchor="end" fill="#6f857b" font-family="SFMono-Regular,Consolas,monospace" font-size="10">${bucket === 0 ? "k = last" : `bit ${bucket - 1}`} · ${items.length}</text>${keys}${items.length > 8 ? `<text x="${x + 12}" y="${y + 98}" fill="#9eb1a7" font-size="11">+${items.length - 8}</text>` : ""}</g>`;
+      }).join("");
+      const empty = occupied.length ? "" : `<text x="${w / 2}" y="${h / 2}" text-anchor="middle" fill="#6f857b" font-size="18">堆为空 · 查询结束</text>`;
+      this.container.innerHTML = `<svg class="heap-state-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="radix 实际桶状态">${cards}${empty}</svg>`;
+      this.statsElement.textContent = `队列 ${snapshot.nodes.length} · 非空桶 ${occupied.length} · last ${snapshot.last}`;
+    }
+    renderTree(snapshot) {
+      const allNodes = snapshot.nodes.map(([id, key, parent]) => ({ id, key, parent, children: [], x: 0, depth: 0 }));
+      const byId = new Map(allNodes.map(node => [node.id, node]));
+      for (const node of allNodes) {
+        if (node.parent >= 0 && byId.has(node.parent)) byId.get(node.parent).children.push(node);
+      }
+      const roots = snapshot.roots.map(id => byId.get(id)).filter(Boolean);
+      let nodes = allNodes;
+      let collapsed = 0;
+      if (allNodes.length > 64) {
+        const visible = new Set();
+        const queue = [...roots];
+        nodes = [];
+        while (queue.length && nodes.length < 64) {
+          const node = queue.shift();
+          if (visible.has(node.id)) continue;
+          visible.add(node.id);
+          nodes.push(node);
+          queue.push(...node.children);
+        }
+        collapsed = allNodes.length - nodes.length;
+        for (const node of nodes) node.children = node.children.filter(child => visible.has(child.id));
+      }
+      let cursor = 0;
+      const place = (node, depth) => {
+        node.depth = depth;
+        if (!node.children.length) {
+          node.x = cursor++;
+          return;
+        }
+        for (const child of node.children) place(child, depth + 1);
+        node.x = (node.children[0].x + node.children[node.children.length - 1].x) / 2;
+      };
+      for (const root of roots) place(root, 0);
+      const w = 900, h = 460, padX = 50, padY = 38;
+      const maxX = Math.max(1, ...nodes.map(node => node.x));
+      const maxDepth = Math.max(1, ...nodes.map(node => node.depth));
+      const point = node => nodes.length === 1 ? [w / 2, h / 2]
+        : [padX + node.x / maxX * (w - padX * 2), padY + node.depth / maxDepth * (h - padY * 2)];
+      const rootIds = new Set(snapshot.roots);
+      const radius = nodes.length <= 10 ? 20 : nodes.length <= 26 ? 16 : 12;
+      const fontSize = nodes.length <= 10 ? 14 : nodes.length <= 26 ? 12 : 10;
+      const visibleIds = new Set(nodes.map(node => node.id));
+      const edges = nodes.filter(node => visibleIds.has(node.parent)).map(node => {
+        const parent = byId.get(node.parent);
+        const [x1, y1] = point(parent), [x2, y2] = point(node);
+        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${rgba(this.color, .32)}" stroke-width="1.4"/>`;
+      }).join("");
+      const body = nodes.map(node => {
+        const [x, y] = point(node);
+        const isRoot = rootIds.has(node.id);
+        const isNew = this.previousIds && !this.previousIds.has(node.id);
+        const fill = isNew ? this.color : "#152821";
+        const textColor = isNew ? "#0a1712" : "#eef4eb";
+        return `<g class="heap-state-node"><title>顶点 ${node.id} · 键 ${node.key}${isRoot ? " · 根" : ` · 父节点 ${node.parent}`}</title><circle cx="${x}" cy="${y}" r="${radius}" fill="${fill}" stroke="${isRoot ? "#d8f58a" : this.color}" stroke-width="${isRoot ? 3 : 1.6}"/><text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" fill="${textColor}" font-family="SFMono-Regular,Consolas,monospace" font-size="${fontSize}">${compactDistance(node.key)}</text></g>`;
+      }).join("");
+      const empty = nodes.length ? "" : `<text x="${w / 2}" y="${h / 2}" text-anchor="middle" fill="#6f857b" font-size="18">堆为空 · 查询结束</text>`;
+      const note = collapsed ? `<text x="${w - 22}" y="${h - 12}" text-anchor="end" fill="#6f857b" font-size="12">另有 ${collapsed} 个节点未展开</text>` : "";
+      this.container.innerHTML = `<svg class="heap-state-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="${LABELS[this.heap]} 实际堆结构">${edges}${body}${empty}${note}</svg>`;
+      this.statsElement.textContent = `队列 ${snapshot.nodes.length} · 根 ${snapshot.roots.length} · 显示 ${nodes.length}`;
+    }
+  }
+
   class TreeOperationViz {
     constructor(container, states, color, options = {}) {
       this.container = container;
@@ -669,7 +801,7 @@
   }
 
   window.DeckVisuals = {
-    COLORS, LABELS, SHORT_LABELS, HINTS, MapView, ArrayHeap, FibViz, RadixViz,
+    COLORS, LABELS, SHORT_LABELS, HINTS, MapView, ArrayHeap, FibViz, RadixViz, HeapStateView,
     MeldViz, BinomialViz, StepAnimation, scaleChart, runtimeChart, ratioChart, spreadChart,
     clamp, formatInt, formatTime, escapeHtml, rgba,
   };
