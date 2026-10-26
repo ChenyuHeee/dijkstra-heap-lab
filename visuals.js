@@ -496,6 +496,98 @@
     }
   }
 
+  class TreeOperationViz {
+    constructor(container, states, color, options = {}) {
+      this.container = container;
+      this.states = states;
+      this.options = options;
+      this.index = 0;
+      this.edges = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      this.edges.setAttribute("class", "tree-op-edges");
+      container.append(this.edges);
+      this.keys = [...new Set(states.flatMap(state => Object.keys(state.positions).map(Number)))];
+      this.elements = new Map();
+      for (const key of this.keys) {
+        const element = document.createElement("div");
+        element.className = "tree-op-node";
+        element.style.setProperty("--tree-color", color);
+        element.innerHTML = `<strong>${key}</strong>${options.npl ? "<small>npl 0</small>" : ""}<i></i>`;
+        container.append(element);
+        this.elements.set(key, element);
+      }
+      this.resizeObserver = new ResizeObserver(() => this.render());
+      this.resizeObserver.observe(container);
+    }
+    setStep(index) {
+      this.index = clamp(index, 0, this.states.length - 1);
+      this.render();
+    }
+    render() {
+      const state = this.states[this.index];
+      const w = this.container.clientWidth || 800;
+      const h = this.container.clientHeight || 400;
+      const point = key => {
+        const position = state.positions[key];
+        return [position[0] / 1000 * w, position[1] / 400 * h];
+      };
+      this.edges.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      this.edges.innerHTML = state.links.map(([a, b]) => {
+        const [x1, y1] = point(a), [x2, y2] = point(b);
+        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+      }).join("");
+      for (const [key, element] of this.elements) {
+        const position = state.positions[key];
+        element.style.opacity = position ? "1" : "0";
+        if (!position) continue;
+        const [x, y] = point(key);
+        element.style.transform = `translate(${x}px, ${y}px)`;
+        element.classList.toggle("is-active", state.active.includes(key));
+        element.querySelector("i").textContent = state.degrees && state.degrees[key] || "";
+      }
+    }
+  }
+
+  class MeldViz extends TreeOperationViz {
+    constructor(container, mode, color) {
+      const initial = { 3: [330, 75], 6: [230, 190], 8: [430, 190], 5: [770, 75] };
+      const linked = { 3: [330, 75], 6: [230, 190], 5: [430, 190], 8: [360, 295] };
+      const skewed = { 3: [330, 75], 5: [230, 190], 6: [430, 190], 8: [160, 295] };
+      const leftist = mode === "left";
+      const states = [
+        { positions: initial, links: [[3, 6], [3, 8]], active: [3, 5], label: "meld(A, B)：从两棵堆的根 3 与 5 开始" },
+        { positions: initial, links: [[3, 6], [3, 8]], active: [3, 8, 5], label: "3 < 5，沿右脊继续 meld(8, 5)" },
+        { positions: linked, links: [[3, 6], [3, 5], [5, 8]], active: [5, 8], label: "5 < 8；链接后交换 5 的孩子，使 8 到左侧" },
+        leftist
+          ? { positions: linked, links: [[3, 6], [3, 5], [5, 8]], active: [3, 6, 5], label: "左偏：npl(6) = npl(5) = 0，根 3 无需交换" }
+          : { positions: skewed, links: [[3, 5], [3, 6], [5, 8]], active: [3, 5, 6], label: "斜堆：根 3 无条件交换左右孩子" },
+        leftist
+          ? { positions: linked, links: [[3, 6], [3, 5], [5, 8]], active: [], label: "最终左偏堆：每个节点都满足 npl(left) ≥ npl(right)" }
+          : { positions: skewed, links: [[3, 5], [3, 6], [5, 8]], active: [], label: "最终斜堆：不维护 npl，交换成本在 meld 中摊还" },
+      ];
+      super(container, states, color, { npl: leftist });
+    }
+  }
+
+  class BinomialViz extends TreeOperationViz {
+    constructor(container, color) {
+      const finalPositions = { 3: [520, 65], 8: [650, 205], 5: [390, 205], 12: [390, 315] };
+      const finalLinks = [[3, 8], [3, 5], [5, 12]];
+      const states = [
+        { positions: { 3: [220, 90], 8: [420, 90], 5: [700, 80], 12: [700, 230] },
+          links: [[5, 12]], active: [3, 8], degrees: { 3: "B0", 8: "B0", 5: "B1" },
+          label: "两个 B0 与一个 B1：先合并度数相同的树" },
+        { positions: { 3: [340, 80], 8: [340, 220], 5: [700, 80], 12: [700, 230] },
+          links: [[3, 8], [5, 12]], active: [3, 8], degrees: { 3: "B1", 5: "B1" },
+          label: "两个 B0 链接：8 成为 3 的孩子，得到 B1" },
+        { positions: finalPositions, links: finalLinks, active: [3, 5], degrees: { 3: "B2" },
+          label: "两个 B1 再链接：5 成为 3 的孩子，得到 B2" },
+        { positions: finalPositions, links: finalLinks, active: [], degrees: { 3: "B2" },
+          label: "B2 有 2² = 4 个节点；同度链接类似二进制加法进位" },
+      ];
+      super(container, states, color);
+    }
+  }
+
   function scaleChart(container) {
     const w = 1000, h = 330;
     const left = 45, right = 45, baseline = 158;
@@ -534,6 +626,30 @@
     container.innerHTML = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="运行时间随图规模变化的双对数图"><title>每查询中位耗时；点击图例筛选数据结构</title>${grid}<line x1="${margin.left}" y1="${h - margin.bottom}" x2="${w - margin.right}" y2="${h - margin.bottom}" stroke="rgba(190,218,201,.25)"/>${xLabels}<text class="chart-axis-title" x="${w / 2}" y="${h - 8}" text-anchor="middle">数据集（横轴按节点数对数定位）</text><text class="chart-axis-title" transform="translate(16 ${h / 2}) rotate(-90)" text-anchor="middle">每查询中位耗时 · ms · log</text>${series}</svg>`;
   }
 
+  function ratioChart(container, selected) {
+    const w = 1000, h = 500;
+    const margin = { left: 66, right: 20, top: 20, bottom: 66 };
+    const xs = DATA.main.map(item => item.n);
+    const xmin = Math.log10(Math.min(...xs)) - .06, xmax = Math.log10(Math.max(...xs)) + .06;
+    const maxRatio = Math.max(...DATA.main.flatMap(item => selected.map(heap => item.times[heap] / item.times.four)));
+    const maxY = Math.max(2.4, Math.ceil(maxRatio * 10) / 10);
+    const x = value => margin.left + (w - margin.left - margin.right) * (Math.log10(value) - xmin) / (xmax - xmin);
+    const y = value => margin.top + (h - margin.top - margin.bottom) * (1 - value / maxY);
+    const ticks = [0, .5, 1, 1.5, 2, 2.5, 3, 3.5, 4].filter(value => value <= maxY);
+    const grid = ticks.map(value => `<line class="chart-grid" x1="${margin.left}" y1="${y(value)}" x2="${w - margin.right}" y2="${y(value)}"/><text class="chart-axis" x="${margin.left - 11}" y="${y(value) + 4}" text-anchor="end">${value.toFixed(1)}</text>`).join("");
+    const xLabels = DATA.main.map(item => `<text class="chart-axis" x="${x(item.n)}" y="${h - 35}" text-anchor="middle">${item.graph}</text>`).join("");
+    const series = selected.map(heap => {
+      const points = DATA.main.map(item => [x(item.n), y(item.times[heap] / item.times.four)]);
+      const d = points.map((point, index) => `${index ? "L" : "M"}${point[0].toFixed(2)} ${point[1].toFixed(2)}`).join(" ");
+      const dots = DATA.main.map((item, index) => {
+        const ratio = item.times[heap] / item.times.four;
+        return `<g class="chart-point" tabindex="0"><title>${item.graph} · ${LABELS[heap]} / four · ${ratio.toFixed(3)} · ${item.times[heap].toFixed(1)} / ${item.times.four.toFixed(1)} ms</title><circle cx="${points[index][0]}" cy="${points[index][1]}" r="5" fill="${COLORS[heap]}"/></g>`;
+      }).join("");
+      return `<path class="chart-line" pathLength="1" d="${d}" stroke="${COLORS[heap]}"/>${dots}`;
+    }).join("");
+    container.innerHTML = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="相对 4-ary 堆的耗时比趋势图"><title>每查询中位耗时比，以 four 为 1.0</title>${grid}<line x1="${margin.left}" y1="${y(1)}" x2="${w - margin.right}" y2="${y(1)}" stroke="rgba(216,245,138,.55)" stroke-dasharray="6 5"/>${xLabels}<text class="chart-axis-title" x="${w / 2}" y="${h - 8}" text-anchor="middle">数据集（横轴按节点数对数定位）</text><text class="chart-axis-title" transform="translate(16 ${h / 2}) rotate(-90)" text-anchor="middle">耗时比 · time / four</text>${series}</svg>`;
+  }
+
   function spreadChart(container) {
     const w = 1000, h = 390;
     const margin = { left: 62, right: 20, top: 22, bottom: 55 };
@@ -554,7 +670,7 @@
 
   window.DeckVisuals = {
     COLORS, LABELS, SHORT_LABELS, HINTS, MapView, ArrayHeap, FibViz, RadixViz,
-    StepAnimation, scaleChart, runtimeChart, spreadChart,
+    MeldViz, BinomialViz, StepAnimation, scaleChart, runtimeChart, ratioChart, spreadChart,
     clamp, formatInt, formatTime, escapeHtml, rgba,
   };
 })();

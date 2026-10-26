@@ -16,26 +16,37 @@
   let overviewOpen = false;
   let notesOpen = false;
   let stabilityMode = "repeat";
+  let runtimeMode = "absolute";
 
-  const SPEAKER_NOTES = [
-    `<p><strong>建议 25 秒。</strong>先不念结论，抛出问题：Dijkstra 已经固定，只换优先队列，最短路会变吗？运行时间会变多少？</p><p>右侧不是装饰图，而是 DIMACS 纽约路网局部子图上的真实搜索。项目覆盖 7 种堆、12 个路网，最大图接近 2400 万节点。</p>`,
-    `<p><strong>建议 45 秒。</strong>用地图讲清 extract-min、relax、decrease-key。白色是前沿，彩色是已确定节点；目标点被弹出时才回溯路径。</p><p>可以切换堆或拖动进度。强调：这里展示局部诱导子图帮助理解，性能测量仍在完整图上。</p>`,
-    `<p><strong>建议 45 秒。</strong>默认 A 是 4-ary、B 是 radix。两侧同一源点、目标点和查询；最终距离一致，当前演示中路径也一致。</p><p>操作次数相近并不意味着每次操作成本相同。动画按搜索进度播放，<strong>不能</strong>用播放速度解释性能，性能看后面的真实计时。</p>`,
-    `<p><strong>建议 40 秒。</strong>七种堆分三类：隐式数组、指针型可合并堆、单调整数队列。radix 是补充，不替代题目要求的 Fibonacci 和比较堆。</p><p>公平性统一在主循环之外：同一 CSR、同一查询、编译期展开、目标弹出即停、touched-list 局部重置。正确性验证是计时的前提。</p>`,
-    `<p><strong>建议 35 秒。</strong>数据从 NY 的 26 万节点到 USA 的 2395 万节点。主实验每个堆合计 8700 对查询：7 个数据集各 1000，3 个各 500，CTR/USA 各 100。</p><p>主动说明最大图主表查询数，避免让观众误以为每图都是 1000；最大图的补充验证单独展示。</p>`,
-    `<p><strong>建议 55 秒。</strong>双对数坐标下排名稳定。 radix 在 12 个图全部最快，4-ary 在全部比较堆中最快，Fibonacci 始终更慢。</p><p>点几个代表值：NY 的 radix / four / fib 为 11.2 / 12.9 / 26.8 ms；USA 为 1471.0 / 2024.3 / 4108.8 ms。需要看全部堆时点击右上角。</p>`,
-    `<p><strong>建议 40 秒。</strong>把 USA 的一次查询换成秒：radix 1.471 秒，four 2.024 秒，fib 4.109 秒。 radix 相比 four 少约 27%，fib 是 four 的约 2.03 倍。</p><p>这里仍是主实验 100 对查询的中位数。可切换其它数据集，但不要跨不同查询数直接比较绝对时间。</p>`,
-    `<p><strong>建议 50 秒。</strong>让插入键 4 的动画播放：二叉堆上滤两次，4-ary 一次。树高从 log₂n 变成 log₄n，且 heap/key/pos 都是连续数组。</p><p>结论不是说 4-ary 渐近更好，而是树更浅、缓存更友好。12 个图上它都快于二叉堆，USA 快约 11%。</p>`,
-    `<p><strong>建议 60 秒。</strong>Fibonacci 的 O(1) decrease-key 是摊还界，但在 Dijkstra 操作序列中 decrease-key 只占 pop 的约 6%–14%。NY 为 14.4%，USA 为 7.2%。</p><p>动画先演示 cut，再演示 pop 后的 consolidate。理论优势省在不占多数的操作上，根链表、同度链接和指针维护却影响每次 pop，因此出现工程反转。</p>`,
-    `<p><strong>建议 55 秒。</strong>radix 利用非负整数键和 extract-min 单调性。按 k XOR last 的最高有效位决定桶号。</p><p>单步播放：最低非空桶是 3，最小键 12 成为新 last；14 移到桶 2，15 留在桶 3。每个 32 位键的元素最多跨桶 32 次，所以摊还 O(1)。最后强调适用边界：它不是通用比较堆。</p>`,
-    `<p><strong>建议 50 秒，四个标签只讲结论。</strong>三轮重复：49 个组合的相对极差中位数 0.43%、最大 1.52%，各图三轮最快结构一致。</p><p>最大图 1000 对：CTR 的 radix/four 为 944.8/1294.6 ms；USA 的 radix/four/fib 为 1474.4/2049.5/4134.8 ms。</p><p>种子检查：12 个组合全部满足 radix &lt; four &lt; fib，比值 0.811–0.916。独立 RSS：USA 的 four 为 832 MB，fib 为 1939 MB，radix 为 850 MB。</p>`,
-    `<p><strong>建议 40 秒。</strong>按约束给建议：通用比较堆选 4-ary；非负整数键且操作单调时选 radix；Fibonacci 作为理论基准保留，不作为本场景的默认工程选择。</p><p>要进一步加速，应该减少搜索空间：双向 Dijkstra、A*、ALT 或 contraction hierarchies。</p>`,
-    `<p>谢谢大家。提问时可按 A 打开备份页，按 O 打开总览返回任意结论页。</p>`,
-    `<p>完整主表保留所有 12 个数据集和 7 种堆。绿色是每行整体最快，琥珀色下划线是比较堆最快。单位均为 ms，查询数在第四列。</p>`,
-    `<p>正确性回答分四层：堆模型、Bellman–Ford、真实路网逐查询验证、 sanitizers。公平性回答强调同一主循环与编译期展开，避免某个堆多付抽象层成本。</p>`,
-    `<p>复杂度页用于回答理论问题。注意 radix 的 O(1) 是摊还复杂度，依赖整数键和单调性；斜堆与 Fibonacci 的对应界也标明摊还。</p>`,
-    `<p>主动承认实验边界：单一机器、随机点对、无 CPU 隔离与锁频。地图是真实坐标和真实堆轨迹，但使用局部诱导子图，只承担算法演示职责。</p>`,
-  ];
+  const SPEAKER_NOTES = {
+    cover: `<p><strong>建议 20 秒。</strong>本次汇报按“题目—数据结构—算法—实验—归因—结论”展开。实现 7 种优先队列，在 12 个美国路网上比较操作成本。</p>`,
+    assignment: `<p><strong>建议 35 秒。</strong>逐项交代题目要求：Dijkstra、至少两种堆且必须含 Fibonacci、美国路网、至少 1000 对查询，以及运行表、规模图和分析。我们的研究问题是这些实现的墙钟差异来自哪些操作。</p>`,
+    "ds-binary": `<p><strong>建议 25–40 秒。</strong>二叉堆是完全二叉树，数组下标直接给父子关系。插入上滤，pop 末元素补根后下滤，decrease 经 pos 定位后上滤。三项都是 O(log n)，它是连续数组路线的基线。</p>`,
+    "ds-four": `<p><strong>建议 25–40 秒。</strong>4-ary 把分支数改为 4，树高从 log₂n 变为 log₄n。虽然每层最多比较 4 个孩子，但移动层数更少，连续数组仍有缓存优势。</p>`,
+    "ds-left": `<p><strong>建议 25–40 秒。</strong>左偏堆维护 npl(left)≥npl(right)，meld 沿右脊。push 是单节点 meld，pop 合并左右子树，decrease 切断、修复 npl 后重新 meld。指针和 npl 维护是工程成本。</p>`,
+    "ds-skew": `<p><strong>建议 25–40 秒。</strong>斜堆与左偏堆使用相似的 meld，但不记录 npl，每次链接后无条件交换孩子。三项操作都是 O(log n) 摊还。对照动画看根 3：左偏不必交换，斜堆必须交换。</p>`,
+    "ds-binom": `<p><strong>建议 25–40 秒。</strong>二项堆是按 degree 排列的二项树森林，Bk 有 2^k 个节点。动画展示 B0 链接成 B1，再把两个 B1 链接成 B2。pop 扫描根、反转孩子并 meld，decrease 交换 key/id 上移。</p>`,
+    "ds-fib": `<p><strong>建议 25–40 秒。</strong>Fibonacci 延迟整理：push 进根链表，decrease 用 cut 和级联切断，pop 才 consolidate。O(1) 是摊还界，不代表任何一次 decrease 都严格一步完成。</p>`,
+    "ds-radix": `<p><strong>建议 25–40 秒。</strong>radix 依赖非负整数键和单调 last，按 k XOR last 的最高有效位分桶。最低非空桶找 min，更新 last 后重分桶。每个 32 位元素最多跨桶 32 次，三项操作摊还 O(1)，但不是通用比较堆。</p>`,
+    dijkstra: `<p><strong>建议 40 秒。</strong>现在把数据结构放回 Dijkstra：首次发现顶点 push，更短距离出现时 decrease，弹出最小键确定顶点，目标弹出即停。地图是真实 NY 局部轨迹，性能仍来自完整图。</p>`,
+    compare: `<p><strong>建议 30 秒。</strong>同一源点和目标点，最短距离不变；这个例子里路径也一致。优先队列改变的是操作实现和成本。动画按搜索进度播放，不代表实测速度。</p>`,
+    fairness: `<p><strong>建议 40 秒。</strong>唯一主动变量是堆。图、CSR、Dijkstra 模板、查询、编译选项、单线程绑核和计时口径全部固定。正确性先做模型、Bellman–Ford、真实路网与 sanitizer 验证。</p>`,
+    scale: `<p><strong>建议 40 秒。</strong>12 个数据集从 NY 到 USA。主实验每种堆 8700 对查询：7 个 1000、3 个 500、CTR/USA 各 100。三轮重复、最大图 1000 对、种子和 RSS 是独立补充实验，不混入口径。</p>`,
+    runtime: `<p><strong>建议 45 秒。</strong>先给结果：radix 在 12 个图全部最快，four 在比较堆中全部最快，Fibonacci 最慢。NY 三者是 11.2/12.9/26.8 ms，USA 是 1471.0/2024.3/4108.8 ms。</p><p>节点数约增长 91 倍，four 的耗时约增长 157 倍，搜索空间之外还有 log n 与缓存压力。切换到相对 four 比值：radix/four 为 0.73–0.96，fib/four 为 2.0–2.3，差距主要是常数因子。</p>`,
+    bars: `<p><strong>建议 35 秒。</strong>USA 主实验 100 对查询中，radix 1.471 秒、four 2.024 秒、Fibonacci 4.109 秒。radix 少 27.3%，Fibonacci 是 four 的 2.03 倍。后面解释这些差距来自哪里。</p>`,
+    operations: `<p><strong>建议 45 秒。</strong>时间是操作次数乘单次成本并叠加访存影响的概念组合，不是拟合公式。USA 每查询约 1230 万次 pop，decrease/pop 只有 7.2%；NY 为 14.4%。因此不能只看 decrease 的渐近复杂度。</p>`,
+    "four-results": `<p><strong>建议 40 秒。</strong>4-ary 的胜利来自更浅上滤路径和连续数组缓存，而不是更好的渐近界。12 个数据集上相比二叉堆耗时降低 7.0%–11.2%，USA 约 11.2%。</p>`,
+    "fib-results": `<p><strong>建议 45 秒。</strong>Fibonacci 的 O(1) decrease 用在不占多数的操作上，每次 pop 却要 consolidate、维护根链表和指针。USA 实测是 four 的 2.03 倍，这就是理论—实践反转。</p>`,
+    "radix-results": `<p><strong>建议 40 秒。</strong>radix 不是“更快地比较”，而是利用整数键和单调性绕开逐层比较。最低非空桶找 min 并重分桶，摊还 O(1)，所以 12 个图全部最快；同时必须说明适用边界。</p>`,
+    robustness: `<p><strong>建议 50 秒，四个标签只讲结论。</strong>三轮重复极差中位数 0.43%、最大 1.52%。USA 1000 对下 radix/four/fib 为 1474.4/2049.5/4134.8 ms。12 个种子组合排名一致。USA 独立 RSS：four 832 MB、fib 1939 MB、radix 850 MB。</p>`,
+    conclusion: `<p><strong>建议 40 秒。</strong>最终结论按适用条件给出：通用比较堆选 four；整数单调键选 radix；Fibonacci 保留为理论基准。进一步加速应减少搜索空间，而不是只微调堆常数。</p>`,
+    qa: `<p>谢谢大家。提问时按 A 查看备份，按 O 返回任意页面。</p>`,
+    "full-results": `<p>完整主表包含 12 个数据集和 7 种堆。薄荷绿是整体最快，琥珀色下划线是比较堆最快；单位 ms，查询数在第四列。</p>`,
+    verification: `<p>正确性分堆模型、Bellman–Ford、真实路网和 sanitizers 四层；公平性强调同一主循环与编译期展开。</p>`,
+    complexity: `<p>复杂度用于回答理论问题。radix、斜堆和 Fibonacci 的相关界限要说明摊还与适用条件。</p>`,
+    limits: `<p>主动承认单一机器、随机查询、无 CPU 隔离与锁频。地图使用真实坐标和真实堆轨迹，但局部子图只承担演示职责。</p>`,
+    faq: `<p>问答备用：CTR/USA 主表查询数、radix 的公平性、4-ary 的缓存优势、Fibonacci 的常数成本、独立内存测量和后续加速。数字与 results/bench.csv 及补充实验一致。</p>`,
+  };
 
   function setPlayButton(button, playing, label = "播放") {
     if (!button) return;
@@ -301,9 +312,12 @@
   }
 
   function renderRuntimeChart(selected) {
-    V.runtimeChart($("runtimeChart"), [...selected]);
+    if (runtimeMode === "ratio") V.ratioChart($("runtimeChart"), [...selected]);
+    else V.runtimeChart($("runtimeChart"), [...selected]);
     $("runtimeLegend").innerHTML = DATA.heaps.map(heap => `<button class="legend-button ${selected.has(heap) ? "is-selected" : ""}" style="--c:${V.COLORS[heap]}" data-heap="${heap}" aria-pressed="${selected.has(heap)}"><i></i>${heap}</button>`).join("");
     $("runtimeAll").textContent = selected.size === DATA.heaps.length ? "只看 4 种代表堆" : "显示全部 7 种";
+    $("runtimeMetric").textContent = runtimeMode === "ratio" ? "绝对耗时 →" : "相对 four →";
+    $("runtimeMetric").setAttribute("aria-pressed", String(runtimeMode === "ratio"));
   }
 
   function renderBars(graph) {
@@ -321,6 +335,15 @@
     $("radixSaving").textContent = `${saving.toFixed(1)}%`;
     $("fibRatio").textContent = `${(item.times.fib / item.times.four).toFixed(2)}×`;
     $("barConclusion").textContent = `${graph} 上，radix 整体最快，four 是比较堆最快；radix / four = ${(item.times.radix / item.times.four).toFixed(2)}。`;
+  }
+
+  function renderOperationCounts() {
+    const rows = ["NY", "BAY", "COL", "FLA", "USA"].map(graph => {
+      const item = DATA.operations.find(row => row.graph === graph);
+      const ratio = item.decreases / item.pops * 100;
+      return `<tr><td>${graph}</td><td>${V.formatInt(item.pushes)}</td><td>${V.formatInt(item.pops)}</td><td>${V.formatInt(item.decreases)}</td><td>${ratio.toFixed(1)}%</td></tr>`;
+    }).join("");
+    $("operationCounts").innerHTML = `<table class="count-table"><thead><tr><th>数据集</th><th>push</th><th>pop / settled</th><th>decrease</th><th>dec / pop</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function renderFullResults() {
@@ -448,8 +471,13 @@
       else selected = new Set(DATA.heaps);
       renderRuntimeChart(selected);
     });
+    $("runtimeMetric").addEventListener("click", () => {
+      runtimeMode = runtimeMode === "absolute" ? "ratio" : "absolute";
+      renderRuntimeChart(selected);
+    });
     $("barDataset").addEventListener("change", event => renderBars(event.target.value));
     renderBars("USA");
+    renderOperationCounts();
     renderFullResults();
     renderComplexity();
     $("stabilityTabs").addEventListener("click", event => {
@@ -463,7 +491,19 @@
 
   function setupScenes() {
     preparePrefixes();
-    const cover = new TracePlayer({
+    const registerOperation = ({ scene, viz, play, reset, labelElement, next = null,
+                                duration = 1300, playLabel = "播放机制" }) => {
+      const animation = new V.StepAnimation(viz.states.length, duration, index => {
+        viz.setStep(index);
+        if (labelElement) $(labelElement).textContent = viz.states[index].label || viz.states[index].phase || "";
+      });
+      controllers.set(scene, new MechanismPlayer({
+        animation, playButton: $(play), resetButton: $(reset), nextButton: next ? $(next) : null,
+        label: playLabel, resize: () => viz.render(),
+      }));
+    };
+
+    controllers.set("cover", new TracePlayer({
       map: new V.MapView($("coverMap"), "radix", { subtle: true, padding: { top: 72, right: 38, bottom: 150, left: 38 } }),
       heap: "radix", auto: true, loop: true,
       onUpdate: ({ step, path, trace }) => {
@@ -471,16 +511,31 @@
           ? `正在确定节点 · ${step} / ${trace.pops}`
           : path < 1 ? "目标已确定 · 回溯最短路径" : `最短距离 ${V.formatInt(trace.distance)} · ${trace.path.length} 个路径节点`;
       },
-    });
-    controllers.set(0, cover);
+    }));
     const explorer = new TracePlayer({
       map: new V.MapView($("explorerMap"), "four"), heap: "four",
       playButton: $("explorerPlay"), resetButton: $("explorerReset"), timeline: $("explorerTimeline"),
       speedButton: $("explorerSpeed"), statsElement: $("explorerStats"), distanceElement: $("explorerDistance"),
     });
     $("explorerHeap").addEventListener("change", event => explorer.setHeap(event.target.value));
-    controllers.set(1, explorer);
-    controllers.set(2, new ComparePlayer());
+    controllers.set("dijkstra", explorer);
+    controllers.set("compare", new ComparePlayer());
+
+    registerOperation({ scene: "ds-binary", viz: new V.ArrayHeap($("dsBinaryTree"), 2, V.COLORS.bin),
+      play: "dsBinaryPlay", reset: "dsBinaryReset", labelElement: "dsBinaryLabel", duration: 1100, playLabel: "插入键 4" });
+    registerOperation({ scene: "ds-four", viz: new V.ArrayHeap($("dsFourTree"), 4, V.COLORS.four),
+      play: "dsFourPlay", reset: "dsFourReset", labelElement: "dsFourLabel", duration: 1100, playLabel: "插入键 4" });
+    registerOperation({ scene: "ds-left", viz: new V.MeldViz($("leftMeld"), "left", V.COLORS.left),
+      play: "leftMeldPlay", reset: "leftMeldReset", labelElement: "leftMeldLabel", playLabel: "播放 meld" });
+    registerOperation({ scene: "ds-skew", viz: new V.MeldViz($("skewMeld"), "skew", V.COLORS.skew),
+      play: "skewMeldPlay", reset: "skewMeldReset", labelElement: "skewMeldLabel", playLabel: "播放 meld" });
+    registerOperation({ scene: "ds-binom", viz: new V.BinomialViz($("binomTrees"), V.COLORS.binom),
+      play: "binomPlay", reset: "binomReset", labelElement: "binomLabel", playLabel: "播放同度链接" });
+    registerOperation({ scene: "ds-fib", viz: new V.FibViz($("fibIntroTree")),
+      play: "fibIntroPlay", reset: "fibIntroReset", labelElement: "fibIntroLabel", duration: 1500 });
+    registerOperation({ scene: "ds-radix", viz: new V.RadixViz($("radixIntroBuckets"), $("radixIntroLast"), $("radixIntroStepLabel")),
+      play: "radixIntroPlay", reset: "radixIntroReset", labelElement: "radixIntroStepLabel",
+      next: "radixIntroNext", duration: 1600, playLabel: "播放重分桶" });
 
     const binary = new V.ArrayHeap($("binaryHeap"), 2, V.COLORS.bin);
     const four = new V.ArrayHeap($("fourHeap"), 4, V.COLORS.four);
@@ -489,40 +544,28 @@
       binary.setStep(index); four.setStep(index);
       $("heapStepLabel").textContent = heapLabels[index];
     });
-    controllers.set(7, new MechanismPlayer({
+    controllers.set("four-results", new MechanismPlayer({
       animation: heapAnimation, playButton: $("heapPlay"), resetButton: $("heapReset"),
       label: "插入键 4", resize: () => { binary.render(); four.render(); },
     }));
-
-    const fib = new V.FibViz($("fibTree"));
-    const fibAnimation = new V.StepAnimation(5, 1500, index => {
-      fib.setStep(index);
-      $("fibPhase").textContent = fib.states[index].phase;
-    });
-    controllers.set(8, new MechanismPlayer({
-      animation: fibAnimation, playButton: $("fibPlay"), resetButton: $("fibReset"),
-      resize: () => fib.render(),
-    }));
-
-    const radix = new V.RadixViz($("radixBuckets"), $("radixLast"), $("radixStepLabel"));
-    const radixAnimation = new V.StepAnimation(4, 1600, index => radix.setStep(index));
-    controllers.set(9, new MechanismPlayer({
-      animation: radixAnimation, playButton: $("radixPlay"), resetButton: $("radixReset"),
-      nextButton: $("radixNext"), label: "播放重分桶", resize: () => radix.render(),
-    }));
+    registerOperation({ scene: "fib-results", viz: new V.FibViz($("fibTree")),
+      play: "fibPlay", reset: "fibReset", labelElement: "fibPhase", duration: 1500 });
+    registerOperation({ scene: "radix-results", viz: new V.RadixViz($("radixBuckets"), $("radixLast"), $("radixStepLabel")),
+      play: "radixPlay", reset: "radixReset", labelElement: "radixStepLabel",
+      next: "radixNext", duration: 1600, playLabel: "播放重分桶" });
 
     const qaMap = new V.MapView($("qaMap"), "four", { subtle: true, padding: { top: 40, right: 40, bottom: 40, left: 60 } });
-    controllers.set(qaIndex, {
+    controllers.set("qa", {
       pause() {}, tick() {}, space() { showSlide(current + 1); },
       enter() { qaMap.resize(); qaMap.setStep(qaMap.trace.pops, 1); },
       resize() { qaMap.resize(); },
-      replay() { qaMap.setStep(0, 0); },
+      replay() { qaMap.setStep(qaMap.trace.pops, 1); },
     });
   }
 
   function updateNotes() {
     $("notesTitle").textContent = `${String(current + 1).padStart(2, "0")} · ${slides[current].dataset.title}`;
-    $("notesBody").innerHTML = SPEAKER_NOTES[current] || "";
+    $("notesBody").innerHTML = SPEAKER_NOTES[slides[current].dataset.scene] || "";
   }
 
   function showSlide(index, updateHash = true) {
@@ -535,7 +578,7 @@
     slides[current].classList.add("is-active");
     slides[current].removeAttribute("aria-hidden");
     slides[current].inert = false;
-    activeController = controllers.get(current) || null;
+    activeController = controllers.get(slides[current].dataset.scene) || null;
     if (updateHash) history.replaceState(null, "", `#${current + 1}`);
     document.title = `${slides[current].dataset.title} · Dijkstra with Heaps`;
     $("pageIndicator").textContent = `${String(current + 1).padStart(2, "0")} / ${slides.length}`;
@@ -551,7 +594,7 @@
     updateNotes();
     $("announcer").textContent = `第 ${current + 1} 页，共 ${slides.length} 页：${slides[current].dataset.title}`;
     if (activeController) activeController.enter();
-    if (current === 10) renderStability();
+    if (slides[current].dataset.scene === "robustness") renderStability();
   }
 
   function toggleNotes(force) {
@@ -591,7 +634,7 @@
   }
 
   function preparePrint() {
-    for (const [index, controller] of controllers) {
+    for (const [scene, controller] of controllers) {
       controller.pause();
       if (controller instanceof TracePlayer) {
         controller.playhead = controller.total();
@@ -602,11 +645,12 @@
       } else if (controller instanceof MechanismPlayer) {
         controller.animation.index = controller.animation.count - 1;
         controller.animation.onStep(controller.animation.index);
-      } else if (index === qaIndex) controller.enter();
+      } else if (scene === "qa") controller.enter();
     }
   }
 
   function setupNavigation() {
+    $("overviewTitle").textContent = `${appendixStart} 个主场景 + ${slides.length - appendixStart} 页备份`;
     $("progressSegments").innerHTML = slides.map((slide, index) => `<button class="${index >= appendixStart ? "is-appendix" : ""}" data-slide="${index}" aria-label="第 ${index + 1} 页：${slide.dataset.title}"></button>`).join("");
     $("overviewGrid").innerHTML = slides.map((slide, index) => `<button class="overview-card ${index >= appendixStart ? "is-appendix" : ""}" data-slide="${index}"><span>${String(index + 1).padStart(2, "0")} / ${index >= appendixStart ? "BACKUP" : "MAIN"}</span><strong>${slide.dataset.title}</strong><small>${slide.dataset.chapter}</small></button>`).join("");
     const goToButton = event => {
