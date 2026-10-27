@@ -89,8 +89,9 @@
   class TracePlayer {
     constructor({ map, heap = "four", playButton = null, resetButton = null, timeline = null,
                   speedButton = null, statsElement = null, distanceElement = null,
-                  auto = false, loop = false, onUpdate = null }) {
+                  auto = false, loop = false, onUpdate = null, rate = 80 }) {
       this.map = map;
+      this.rate = rate;
       this.playButton = playButton;
       this.timeline = timeline;
       this.speedButton = speedButton;
@@ -145,7 +146,7 @@
     }
     tick(dt) {
       if (!this.playing) return;
-      this.playhead += dt / 1000 * 80 * speeds[this.speedIndex];
+      this.playhead += dt / 1000 * this.rate * speeds[this.speedIndex];
       if (this.loop) {
         if (this.playhead >= this.total() + 160) this.playhead = 0;
       } else if (this.playhead >= this.total()) {
@@ -516,7 +517,7 @@
     }));
     const heapState = new V.HeapStateView($("heapTree"), "four", $("heapStateTitle"), $("heapTreeStats"), $("heapStepInfo"));
     const explorer = new TracePlayer({
-      map: new V.MapView($("explorerMap"), "four"), heap: "four",
+      map: new V.MapView($("explorerMap"), "four"), heap: "four", rate: 8,
       playButton: $("explorerPlay"), resetButton: $("explorerReset"), timeline: $("explorerTimeline"),
       speedButton: $("explorerSpeed"), statsElement: $("explorerStats"), distanceElement: $("explorerDistance"),
       onUpdate: ({ step }) => heapState.setStep(step),
