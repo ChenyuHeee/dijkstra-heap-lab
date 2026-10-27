@@ -6,11 +6,11 @@
   <meta name="theme-color" content="#081310">
   <title>Dijkstra 与堆 · 7 种优先队列的实现与实验</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23081310'/%3E%3Cpath d='M7 20h4V10H7zm7 0h4V5h-4zm7 0h4v-8h-4z' fill='%23d8f58a'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=11">
+  <link rel="stylesheet" href="styles.css?v=12">
   <script defer src="data.js"></script>
   <script defer src="demo-data.js"></script>
-  <script defer src="visuals.js?v=11"></script>
-  <script defer src="app.js?v=11"></script>
+  <script defer src="visuals.js?v=12"></script>
+  <script defer src="app.js?v=12"></script>
 </head>
 <body>
   <svg class="svg-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -105,6 +105,15 @@
           <div class="ds-visual ds-radix"><div class="radix-status"><span>上一次弹出的键 <code>last</code></span><strong id="radixIntroLast">10</strong><span id="radixIntroStepLabel">最低非空桶将决定下一个 last</span></div><div id="radixIntroBuckets" class="radix-buckets" aria-label="radix heap 教学分桶动画"></div><div class="radix-formula"><code>bucket(k) = 0</code><span>k = last</span><code>⌊log₂(k XOR last)⌋ + 1</code><span>k ≠ last</span></div><div class="mechanism-controls" data-no-print><button class="control-button" id="radixIntroPlay"><svg><use href="#i-play"/></svg><span>播放重分桶</span></button><button class="icon-button" id="radixIntroNext" aria-label="单步执行教学分桶"><svg><use href="#i-chevron"/></svg></button><button class="icon-button" id="radixIntroReset" aria-label="重置教学分桶"><svg><use href="#i-reset"/></svg></button><span>33 个桶 · 32 位整数键</span></div></div>
           <aside class="ds-operations"><div class="ds-property">整数键 · 单调 last · 按位分桶</div><table class="ds-operation-table"><thead><tr><th>操作</th><th>实现动作</th><th>复杂度</th></tr></thead><tbody><tr><td>push</td><td>按 k XOR last 直接放桶</td><td>O(1) 摊还</td></tr><tr><td>extract-min</td><td>最低桶找 min，更新 last 并重分桶</td><td>O(1) 摊还</td></tr><tr><td>decrease-key</td><td>从原桶删除，按新键重新放桶</td><td>O(1) 摊还</td></tr></tbody></table><div class="ds-cost"><span>DIJKSTRA COST</span><p>last 随 extract-min 单调不减；33 个桶按 k XOR last 的最高有效位分配。pop 在最低非空桶更新 last 并重分桶，每个元素最多跨桶 32 次，因此摊还 O(1)。Dijkstra 为 O(m+n log C)，C 为键值上界。</p></div></aside>
         </div>
+      </section>
+
+      <section class="slide" data-scene="radix-potential" data-title="附录式证明：radix 的势能法摊还分析" data-chapter="数据结构">
+        <div class="slide-head compact-head"><div class="eyebrow">AMORTIZED ANALYSIS / POTENTIAL METHOD</div><h2>radix：为什么重分桶仍是摊还 O(1)？</h2><p>不是每次 pop 都只做一步，而是让扫描与重分桶的成本由势能下降支付。</p></div>
+        <div class="slide-body proof-layout">
+          <article class="potential-card"><span>01 / POTENTIAL</span><h3>势能：队列中所有桶号之和</h3><div class="beta-definition"><div><code>β(v) = 0</code><span>当 k<sub>v</sub> = last</span></div><div><code>β(v) = ⌊log₂(k<sub>v</sub> XOR last)⌋ + 1</code><span>当 k<sub>v</sub> ≠ last</span></div></div><div class="phi-definition">Φ = <span>∑<sub>v∈Q</sub> β(v)</span></div><p><code>last</code> 更新后，β 按新基准重新计算。队列中所有键都不小于 last；这正是 Dijkstra 非负边权提供的单调性。</p><div class="proof-facts"><span>β(v) ≤ 32</span><span>Φ ≥ 0</span><span>初始 Φ = 0</span></div></article>
+          <div class="proof-steps"><article><span>02</span><div><h3>push / decrease-key</h3><p>桶号最大为 32，所以每次操作最多让势能增加 32，记为 <strong>ΔΦ ≤ 32</strong>。decrease-key 的桶号可能上升，也可能下降；上升量同样不超过 32。</p></div></article><article><span>03</span><div><h3>extract-min：由势能下降支付</h3><p>桶 0 非空时直接弹出，成本为 O(1)。若最低非空桶为 b &gt; 0，桶中有 s 个元素，扫描与重分桶成本为 s。</p><p>最小元素成为新的 last：被弹出元素少贡献 b，其余 s−1 个元素的桶号都严格下降至少 1，更高桶不变。因此 <strong>−ΔΦ ≥ b + (s−1) ≥ s</strong>。</p></div></article><article class="proof-total"><span>04</span><div><h3>求和：每次操作摊还 O(1)</h3><div class="proof-equation">T ≤ P + 32(N + D) = O(N + D)</div><p>N = push 次数，D = decrease-key 次数，P = pop 次数且 P ≤ N。势能的下降总量覆盖扫描与重分桶工作；由 Φ ≥ 0 和伸缩求和即得结论。</p></div></article></div>
+        </div>
+        <div class="slide-footnote">实现对应：src/pq_radix.h 的 bucket_index 与 radix_pop。关键是“摊还”，不是承诺每次 pop 都严格 O(1)。</div>
       </section>
 
       <section class="slide" data-scene="dijkstra" data-title="Dijkstra 怎样使用这些堆？" data-chapter="算法">
@@ -203,9 +212,9 @@
 
       <section class="slide appendix-slide" data-scene="faq" data-title="备份：可能被问到的问题" data-chapter="备份" data-appendix="true"><div class="slide-head compact-head"><div class="eyebrow">APPENDIX 05 / FAQ</div><h2>可能被问到的问题</h2><p>把实验口径和结论边界放在同一页，便于问答时快速定位。</p></div><div class="slide-body faq-grid"><article><span>01</span><h3>为什么 CTR / USA 主表只有 100 对？</h3><p>完整组合耗时较长，主表控制预算；随后已用 fib / four / radix 补跑 1000 对，排名一致。</p></article><article><span>02</span><h3>radix 参加比较公平吗？</h3><p>它利用题目已有的整数键和单调性，单独归类为单调优先队列；比较堆内部结论不受影响。</p></article><article><span>03</span><h3>为什么 4-ary 快于二叉堆？</h3><p>树更浅、连续数组缓存更友好；12/12 个数据集上耗时降低约 7.0%–11.2%。</p></article><article><span>04</span><h3>为什么 Fibonacci 反而最慢？</h3><p>decrease-key 只占 pop 的约 5.8%–14.4%；每次 pop 的 consolidate 和指针常数占主导。</p></article><article><span>05</span><h3>内存占用是多少？</h3><p>USA CSR 约 562 MB；独立进程峰值：four 832 MB、radix 850 MB、Fibonacci 1939 MB。</p></article><article><span>06</span><h3>还能继续加速吗？</h3><p>双向 Dijkstra、A*、ALT、contraction hierarchies。减少搜索空间比继续微调堆常数更有效。</p></article></div></section>
 
-      <footer class="deck-footer" data-no-print><div class="footer-progress"><div id="progressSegments"></div><span id="chapterLabel">开场</span></div><button class="footer-hint" id="helpButton" aria-label="查看键盘快捷键">← → 切页 <span>·</span> Space 播放 <span>·</span> ? 快捷键</button><div class="footer-nav"><span id="pageIndicator">01 / 29</span><button class="icon-button" id="previousButton" aria-label="上一页"><svg><use href="#i-arrow"/></svg></button><button class="icon-button next-icon" id="nextButton" aria-label="下一页"><svg><use href="#i-arrow"/></svg></button></div></footer>
+      <footer class="deck-footer" data-no-print><div class="footer-progress"><div id="progressSegments"></div><span id="chapterLabel">开场</span></div><button class="footer-hint" id="helpButton" aria-label="查看键盘快捷键">← → 切页 <span>·</span> Space 播放 <span>·</span> ? 快捷键</button><div class="footer-nav"><span id="pageIndicator">01 / 30</span><button class="icon-button" id="previousButton" aria-label="上一页"><svg><use href="#i-arrow"/></svg></button><button class="icon-button next-icon" id="nextButton" aria-label="下一页"><svg><use href="#i-arrow"/></svg></button></div></footer>
       <aside id="notesPanel" aria-label="演讲者备注" hidden><div class="notes-head"><span>SPEAKER NOTES</span><button class="icon-button" id="closeNotes" aria-label="关闭备注"><svg><use href="#i-close"/></svg></button></div><h2 id="notesTitle"></h2><div id="notesBody"></div><div class="notes-footer">N 关闭备注 · 动画页按 R 重播</div></aside>
-      <div id="overviewPanel" class="overlay-panel" hidden><div class="overlay-head"><div><span>DECK OVERVIEW</span><h2 id="overviewTitle">24 个主场景 + 5 页备份</h2></div><button class="icon-button" id="closeOverview" aria-label="关闭总览"><svg><use href="#i-close"/></svg></button></div><div id="overviewGrid" class="overview-grid"></div></div>
+      <div id="overviewPanel" class="overlay-panel" hidden><div class="overlay-head"><div><span>DECK OVERVIEW</span><h2 id="overviewTitle">25 个主场景 + 5 页备份</h2></div><button class="icon-button" id="closeOverview" aria-label="关闭总览"><svg><use href="#i-close"/></svg></button></div><div id="overviewGrid" class="overview-grid"></div></div>
     </div>
   </main>
 

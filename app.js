@@ -28,6 +28,7 @@
     "ds-binom": `<p><strong>建议 25–40 秒。</strong>二项堆是按 degree 排列的二项树森林，Bk 有 2^k 个节点。动画展示 B0 链接成 B1，再把两个 B1 链接成 B2。pop 扫描根、反转孩子并 meld，decrease 交换 key/id 上移。</p>`,
     "ds-fib": `<p><strong>建议 25–40 秒。</strong>Fibonacci 延迟整理：push 进根链表，decrease 用 cut 和级联切断，pop 才 consolidate。O(1) 是摊还界，不代表任何一次 decrease 都严格一步完成。</p>`,
     "ds-radix": `<p><strong>建议 25–40 秒。</strong>radix 依赖非负整数键和单调 last，按 k XOR last 的最高有效位分桶。最低非空桶找 min，更新 last 后重分桶。每个 32 位元素最多跨桶 32 次，三项操作摊还 O(1)，但不是通用比较堆。</p>`,
+    "radix-potential": `<p><strong>建议 50 秒。</strong>按四步讲：Φ 是队列中所有元素桶号之和；push/decrease 每次最多让 Φ 增加 32；最低非空桶 b 的 s 个元素需要扫描和重分桶，但弹出元素少贡献 b，其余元素桶号严格下降，所以 −ΔΦ≥s。最后用 Φ≥0 和伸缩求和得到 T≤P+32(N+D)=O(N+D)。</p><p>强调这是摊还界。decrease-key 的桶号可能增加，但每次最多增加 32；last 更新后按新基准重新计算桶号。</p>`,
     dijkstra: `<p><strong>建议 40 秒。</strong>现在把数据结构放回 Dijkstra：首次发现顶点 push，更短距离出现时 decrease，弹出最小键确定顶点，目标弹出即停。地图是真实 NY 局部轨迹，性能仍来自完整图。</p><p>右侧同步画实际堆树：圆点是顶点，连线是父子关系；指针堆显示森林，radix 显示真实桶。每 4 次 pop 采样，不是操作次数图。拖动进度可对照地图与内部结构。</p>`,
     compare: `<p><strong>建议 30 秒。</strong>同一源点和目标点，最短距离不变；这个例子里路径也一致。优先队列改变的是操作实现和成本。动画按搜索进度播放，不代表实测速度。</p>`,
     implementation: `<p><strong>建议 40 秒。</strong>这一页来自报告 2.1–2.4，用来补充实现细节：两遍扫描构造 CSR、目标弹出即停、touched-list 做 O(reached) 重置。强调 consolidate 工作数组 A 只分配一次并复用，这是真实的实现修正，不是忽略成本。</p>`,

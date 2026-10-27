@@ -412,6 +412,29 @@ select option { background: var(--panel); }
 .seed-table th:first-child, .seed-table td:first-child { text-align: left; }
 .seed-table td:last-child { color: var(--radix); }
 
+.proof-layout { display: grid; grid-template-columns: .9fr 1.1fr; gap: 22px; }
+.potential-card { padding: 25px 27px; border: 1px solid rgba(101, 222, 178, .22); border-radius: 14px; background: linear-gradient(145deg, rgba(101, 222, 178, .075), var(--panel-soft)); }
+.potential-card > span { color: var(--radix); font-family: var(--mono); font-size: 10px; letter-spacing: .1em; }
+.potential-card h3 { margin-top: 15px; font-size: 23px; line-height: 1.4; }
+.beta-definition { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.beta-definition > div { display: flex; flex-direction: column; gap: 7px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: rgba(4, 14, 10, .24); }
+.beta-definition code { color: var(--radix); font-size: 15px; line-height: 1.5; }
+.beta-definition span { color: var(--faint); font-size: 11px; }
+.phi-definition { margin-top: 18px; padding: 15px; color: var(--accent); font-family: var(--mono); font-size: 39px; text-align: center; }
+.phi-definition span { font-size: 23px; }
+.potential-card > p { margin-top: 16px; color: var(--muted); font-size: 13px; line-height: 1.75; }
+.potential-card > p code { color: var(--radix); }
+.proof-facts { display: flex; gap: 9px; margin-top: 18px; }
+.proof-facts span { padding: 5px 9px; border: 1px solid rgba(101, 222, 178, .22); border-radius: 6px; color: var(--radix); font-family: var(--mono); font-size: 10px; }
+.proof-steps { display: flex; flex-direction: column; gap: 14px; }
+.proof-steps > article { flex: 1; display: flex; align-items: flex-start; gap: 17px; padding: 17px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-soft); }
+.proof-steps > article > span { padding-top: 3px; color: var(--radix); font-family: var(--mono); font-size: 11px; }
+.proof-steps h3 { font-size: 18px; line-height: 1.4; }
+.proof-steps p { margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.proof-steps strong { color: var(--ink); font-weight: 550; }
+.proof-steps .proof-total { border-color: rgba(216, 245, 138, .24); background: rgba(216, 245, 138, .045); }
+.proof-equation { margin-top: 12px; color: var(--accent); font-family: var(--mono); font-size: 24px; line-height: 1.5; }
+
 .text-page-grid { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
 .text-page-grid > article { padding: 27px 28px 54px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel-soft); }
 .text-page-grid > article > span { color: var(--radix); font-family: var(--mono); font-size: 10px; letter-spacing: .08em; }
