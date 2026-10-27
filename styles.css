@@ -412,6 +412,20 @@ select option { background: var(--panel); }
 .seed-table th:first-child, .seed-table td:first-child { text-align: left; }
 .seed-table td:last-child { color: var(--radix); }
 
+.text-page-grid { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.text-page-grid > article { padding: 27px 28px 54px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel-soft); }
+.text-page-grid > article > span { color: var(--radix); font-family: var(--mono); font-size: 10px; letter-spacing: .08em; }
+.text-page-grid h3 { margin-top: 18px; font-size: 24px; line-height: 1.4; letter-spacing: -.025em; }
+.text-page-grid p { margin-top: 15px; color: var(--muted); font-size: 16px; line-height: 1.85; }
+.text-page-grid strong { color: var(--ink); font-weight: 550; }
+.text-page-grid code { color: var(--radix); font-size: 13px; }
+.text-source { position: absolute; left: 30px; bottom: 16px; color: var(--faint); font-family: var(--mono); font-size: 10px; }
+.text-page-grid.two-by-two { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.text-page-grid.two-by-two > article { padding: 20px 23px 36px; }
+.text-page-grid.two-by-two h3 { margin-top: 11px; font-size: 21px; }
+.text-page-grid.two-by-two p { margin-top: 10px; font-size: 14px; line-height: 1.7; }
+.text-page-grid.two-by-two .text-source { bottom: 12px; }
+
 .ds-english { margin-left: 12px; color: var(--faint); font-size: 20px; font-weight: 450; letter-spacing: -.015em; }
 .ds-layout { display: grid; grid-template-columns: minmax(0, 1fr) 450px; gap: 24px; }
 .ds-visual { display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: var(--panel-soft); }
